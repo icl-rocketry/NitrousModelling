@@ -1,7 +1,6 @@
-#Junk files I have in the same folder, probably should just move them, but why not .gitignore them instead
-BadGeometricNitrousAndAirTank.m
-dataOffsetFinder.m
-GasPropsRender.m
-NonLinearEqnSolverTheory.PNG
-NonLinearSolverTest.m
-something.m
+# Mac OS X hidden files
+.DS_Store
+
+# MATLAB Autosave
+.m~
+.asv
