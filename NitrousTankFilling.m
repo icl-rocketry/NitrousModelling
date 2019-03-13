@@ -54,14 +54,16 @@ classdef NitrousTankFilling < handle
             velIntoIntTank = -1;
             %[mdotBetweenTanks,tempIntoIntTank,velIntoIntTank] = obj.pipeBetweenTanks.calcOutlet();
             fprintf(['mdot between tanks: ',num2str(mdotBetweenTanks),' This tick: ',num2str(obj.dt*mdotBetweenTanks),'\n']);
+            disp("Specific Enthalpy top of tank: "+obj.internalTank.specificEnthalpyTopOfTank());
             %pause(2);
             obj.externalTank.drainAmountOfLiquid(obj.dt*mdotBetweenTanks); %Remove from external tank the liquid nitrous
             
             %Add this nitrous to the internal tank
             fprintf(['Adding nitrous mass to internal tank with temperature ',num2str(obj.internalTank.temp),', Cp: ',num2str(FluidType.NITROUS_LIQUID.getCp(obj.externalTank.temp,obj.externalTank.pressureAtBaseOfTank)),', flow temp: ',num2str(tempIntoIntTank),', flow velocity: ',num2str(velIntoIntTank),'\n']);
-            CpExt = FluidType.NITROUS_LIQUID.getCp(obj.externalTank.temp,obj.externalTank.pressureAtBaseOfTank);
+            %CpExt = FluidType.NITROUS_LIQUID.getCp(obj.externalTank.temp,obj.externalTank.pressureAtBaseOfTank);
             TExt = obj.externalTankTemp;
-            ho = CpExt * TExt;
+            ho = FluidType.NITROUS_LIQUID.getSpecificEnthalpy(TExt,obj.externalTank.pressureAtBaseOfTank);
+            disp("Specific enthalpy bottom of tank: "+ho);
             obj.internalTank.addAmountOfNitrous(obj.dt*mdotBetweenTanks,obj.dt*mdotBetweenTanks*ho);
             fprintf(['Run tank temperature after transfer: ',num2str(obj.internalTank.temp),'\n']);
             
@@ -101,8 +103,10 @@ classdef NitrousTankFilling < handle
             
             %fprintf(['New tank temperature: ',num2str(obj.internalTank.temp),'K\n']);
             
+            
             %Calculate heat transferred to the internal tank in this time
             QInternal = obj.dt * obj.internalTankSurfaceArea * obj.heatTransferCoeffInternalTank * (obj.ambientTemp - obj.internalTank.temp);
+            fprintf(['Qin from surroundings: ',num2str(QInternal/obj.dt),'\n']);
             fprintf(['Heat transfer with surroundings: ',num2str(QInternal),'\n']);
             obj.internalTank.addHeat(QInternal); %Transfer this heat
             

@@ -57,7 +57,7 @@ classdef NitrousFluidPipe < matlab.mixin.Copyable%handle %Handle class so that p
 %             drawnow;
             if fluidType == FluidType.NITROUS_LIQUID %If liquid then treat as saturated flow
                [X2,T2,v2,h2,G] = SaturatedNitrous.getDownstreamIsentropicSaturatedHEMFlowCond(0,To,Po,PDownstream,0); 
-                mdot = G * obj.thinnestCrossSectionA;
+                mdot = real(G * obj.thinnestCrossSectionA);
                return;
             end
             

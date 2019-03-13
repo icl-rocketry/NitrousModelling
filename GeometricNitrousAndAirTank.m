@@ -523,6 +523,10 @@ classdef GeometricNitrousAndAirTank < matlab.mixin.Copyable%handle %Handle class
             end
         end
         
+        function h = specificEnthalpyTopOfTank(obj)
+            h = FluidType.NITROUS_GAS.getSpecificEnthalpy(obj.temp,obj.getPressureAtHeight(obj.gasVentHoleHeight));
+        end
+        
         function drainSmallAmountOfVapour(obj,mDrained)
            h = FluidType.NITROUS_GAS.getSpecificEnthalpy(obj.temp,obj.getPressureAtHeight(obj.gasVentHoleHeight));
            H = h*mDrained;
