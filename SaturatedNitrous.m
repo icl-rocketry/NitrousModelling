@@ -29,6 +29,122 @@ classdef SaturatedNitrous
             h = hVapour*X + hLiquid*(1-X);
         end
         
+        %Bubble growth time characteristic as defined in "Modeling feed
+        %system flow physics for self pressurising propellants" by Jonny
+        %Dyer https://arc.aiaa.org/doi/pdf/10.2514/6.2007-5702. 1 denotes
+        %upstream, 2 denotes downstream. Units are SI
+        function Tb = getBubbleGrowthTimeCharacteristic(P1,T1,P2)
+            rhoLiq = FluidType.NITROUS_LIQUID.getDensity(T1,P1);
+            vapourPressure = SaturatedNitrous.getVapourPressure(T1);
+            Tb = sqrt(1.5 * (rhoLiq/(vapourPressure-P2)));
+        end
+        
+        %Residence time (proportional to how long fluid will take to do this) characteristic as defined in "Modeling feed
+        %system flow physics for self pressurising propellants" by Jonny
+        %Dyer https://arc.aiaa.org/doi/pdf/10.2514/6.2007-5702. 1 denotes
+        %upstream, 2 denotes downstream. Units are SI. Length is distance
+        %in metres flow is travelling over for this pressure change
+        function Tr = getResidenceTime(P1,T1,P2,length)
+            rhoLiq = FluidType.NITROUS_LIQUID.getDensity(T1,P1);
+            Tr = length*sqrt(rhoLiq/(2*(P1-P2)));
+        end
+        
+        %Get the non-equilibrium flow parameter as defined in "Modeling feed
+        %system flow physics for self pressurising propellants" by Jonny
+        %Dyer https://arc.aiaa.org/doi/pdf/10.2514/6.2007-5702. 1 denotes
+        %upstream, 2 denotes downstream. Units are SI. Length is distance
+        %flow is travelling over for this pressure change. If results given
+        %by this are not as desired, try adjusting "length" until it
+        %changes the output by the correct amount. (If normal flow
+        %coefficient applied to mass flow isn't enough)
+        %Non-equilibrium flow parameter is a ratio of bubble time to
+        %residence time (If large then bubbles take longer to form relative
+        %to time taken for this flow and therefore have little time to form, 
+        %if small then bubbles have a long time to form
+        function k = getNonEquilibriumFlowParameter(P1,T1,P2,length)
+            k = SaturatedNitrous.getBubbleGrowthTimeCharacteristic(P1,T1,P2) / SaturatedNitrous.getResidenceTime(P1,T1,P2,length);
+        end
+        
+        %Get the downstream mass flow rate predicted by an ideal incompressible
+        %assumption for a given upstream pressure, temperature and velocity
+        %and given downstream pressure. G is mass flow per unit area, all
+        %units SI. Temperature given by this also assumes flow is
+        %adiabatic and quality given by this assumes isentropic. Set ignoreTempAndQuality to true if you don't want to calculate
+        %the temperature and quality downstream (will make this 1000x faster to
+        %compute)
+        function [X2,T2,v2,h2,G] = getDownstreamIncompressibleMassFlowTemp(X1,P1,T1,P2,v1,ignoreTempAndQuality)
+            rho = FluidType.NITROUS_LIQUID.getDensity(T1,P1); %Upstream density, as incompressible assume is constant
+            G = sqrt(2.*rho.*(P1-P2) + rho.^2.*v1.^2);
+            v2 = G ./ rho; %G = rho * v
+            %Assume total enthalpy constant to figure out T
+            h0 = FluidType.NITROUS_LIQUID.getSpecificEnthalpy(T1,P1) + (v1.^2)./2;
+            h2 = h0 - (v2.^2/2); %Downstream enthalpy
+            
+            if ~exist('ignoreTemp','var') || ~ignoreTempAndQuality
+                T2 = real(fzero(@T2Err,T1));
+                s1 = SaturatedNitrous.getSpecificEntropy(X1,T1,P1);
+                X2 = real(fzero(@(X) real(SaturatedNitrous.getSpecificEntropy(real(X),T2,P2)-s1),X1)); %Find quality downstream that satisfies isentropic condition
+            else
+                T2 = -1; 
+                X2 = 0;
+            end
+            function err = T2Err(TGuess) %Error in guess for downstream temperature (to match the enthalpy)
+                h =  FluidType.NITROUS_LIQUID.getSpecificEnthalpy(real(TGuess),P2);
+                err = h-h2; %0 if downstream enthalpy matches
+            end
+        end
+        
+        %Get the flow rate and characteristics predicted by a
+        %non-homogenous non equilibrium model as defined By Dyer in
+        %"Modeling feed system physics for self pressurising propellants"
+        %(https://arc.aiaa.org/doi/pdf/10.2514/6.2007-5702)
+        %and with the correction to the model coefficients made as given by
+        %Brian Solomon in "Engineering Model to calculate mass flow rate of
+        %a two phase saturated fluid through an injector orifice"
+        %(https://digitalcommons.usu.edu/cgi/viewcontent.cgi?article=1110&context=gradreports)
+        %Some slight extra handling added to give good answers even if
+        %input not pefectly on saturation to start
+        %Mass flow answers given by this should be corrected with an empirically
+        %determined coefficient
+        function [X2,T2,v2,h2,G] = getDownstreamSaturatedNHNEFlowCond(X1,T1,P1,P2,v1,length)
+            %While P1 larger than vapour pressure for given temperature by
+            %more than 0.1%, and quality close enough to liquid, drop
+            %pressure isentropically until reach saturation line
+            while ((P1-SaturatedNitrous.getVapourPressure(T1))/SaturatedNitrous.getVapourPressure(T1)) > 0.001 && X1 < 0.01
+                %Drop pressure to vapour pressure and keep a track of
+                %velocity,temp etc...
+                vapourPressure = max(SaturatedNitrous.getVapourPressure(T1),P2);
+                h1 = SaturatedNitrous.getSpecificEnthalpy(X1,T1,P1); %Enthalpy upstream
+                [T1,~,~] = RealFlow.getIsentropicTempVelocity(P1,T1,T1,FluidType.NITROUS_LIQUID.getCp(T1,P1),vapourPressure,FluidType.NITROUS_LIQUID);
+                h2 = SaturatedNitrous.getSpecificEnthalpy(X1,T1,vapourPressure); %Enthalpy after pressure drop
+                KEGain = h1-h2; %specific KE gain is difference in fluid enthalpies upstream and downstream
+                v1 = sqrt(2*(0.5*v1.^2 + KEGain)); %Energy balance, assuming no other losses
+                P1 = vapourPressure;
+                if P1 == P2 %Flow never reached saturation line
+                    X2 = X1;
+                    T2 = T1;
+                    v2 = v1;
+                    %h2 = h2;
+                    rhoLiq = FluidType.NITROUS_LIQUID.getDensity(T2,P2);
+                    G = rhoLiq * v2;
+                    return;
+                end
+            end
+            k = SaturatedNitrous.getNonEquilibriumFlowParameter(P1,T1,P2,length);
+            incompressibleCoeff = (1-1/(1+k)); %From correction to dyer by solomon
+            hemCoeff = (1/(1+k)); %From correction to dyer by solomon
+            
+            %Calculate flow both incompressibly and with HEM
+            [X2Inc,T2Inc,v2Inc,h2Inc,GInc] = SaturatedNitrous.getDownstreamIncompressibleMassFlowTemp(X1,P1,T1,P2,v1);
+            [X2Hem,T2Hem,v2Hem,h2Hem,GHem] = SaturatedNitrous.getDownstreamIsentropicSaturatedHEMFlowCond(X1,T1,P1,P2,v1);
+            %Weighting of flow properties as in Dyer
+            X2 = incompressibleCoeff * X2Inc + hemCoeff * X2Hem;
+            T2 = incompressibleCoeff * T2Inc + hemCoeff * T2Hem;
+            v2 = incompressibleCoeff * v2Inc + hemCoeff * v2Hem;
+            h2 = incompressibleCoeff * h2Inc + hemCoeff * h2Hem;
+            G = incompressibleCoeff * GInc + hemCoeff * GHem;
+        end
+        
         %Get downstream conditions of a flow that is modelled by isentropic
         %saturated homogenous equilibrium model - very much an imperfect
         %model, but it seems like better models for this kind of flow don't
