@@ -29,6 +29,8 @@ function [x] = betterfzero(func,x0,minX,maxX,convergenceTolerance,MAX_ITERS,mind
     bracketing = true;
     if (yMin > 0 && yMax > 0) || (yMax < 0 && yMin < 0)
         bracketing = false; %No sign change, cannot use bracketing
+        x = fzero(func,x0); %Call to fzero instead
+        return;
         %error('This solver is designed for when change of sign from xMin to xMax, problem supplied does not seem to satisfy this');
     end
 
