@@ -81,8 +81,8 @@ classdef NitrousFluid
             %Interpolated second column values at each of the first columns
             %required for the second interpolation (Use these values for
             %2nd interpolation)
-            valLower = NitrousFluid.oneColInterp(dataAtIndep1Lower,2,3,indepVal2);
-            valUpper = NitrousFluid.oneColInterp(dataAtIndep1Upper,2,3,indepVal2);
+            valLower = NitrousFluid.oneColInterp(dataAtIndep1Lower,indepCol2,depCol,indepVal2);
+            valUpper = NitrousFluid.oneColInterp(dataAtIndep1Upper,indepCol2,depCol,indepVal2);
             
             %disp(data);
             
@@ -557,6 +557,104 @@ classdef NitrousFluid
             val = NitrousFluid.oneColInterp(data,1,2,T);
             %Val is in J/K/mol, convert to J/K/Kg
             val = val / NitrousFluid.getMolarMass();
+        end
+%         
+%         %Find the liquid entropy change for a perturbation in pressure at
+%         %constant temperature - NOT ACCURATE ENOUGH, probably needs better
+%         %density data
+%         function val = getLiquidEntropyChange(T1,P1,P2) %From basic re-arrangement of Tds equation for constant temperature (changing pressure)
+%             u1 = FluidType.NITROUS_LIQUID.getSpecificInternalEnergy(T1,P1);
+%             u2 = FluidType.NITROUS_LIQUID.getSpecificInternalEnergy(T1,P2);
+%             v1 = 1/FluidType.NITROUS_LIQUID.getDensity(T1,P1);
+%             v2 = 1/FluidType.NITROUS_LIQUID.getDensity(T1,P2);
+%             integrand = @(v) NitrousFluid.getLiquidPressure(T1,(1/v));
+%             dP = P2-P1; %Difference in pressure
+%             stepSize = 10000; %Step size to use for numerical integration
+%             steps = ceil(abs(dP / stepSize)); %Number of discrete steps for integration
+%             Tds = (u2-u1) + legendreIntegral(integrand,max(4,steps),v1,v2);
+%             val = Tds ./ T1;
+%         end
+        
+%         %Find the gas entropy change for a perturbation in pressure at
+%         %constant temperature - NOT ACCURATE ENOUGH, probably needs better
+%         %density data
+%         function val = getGasEntropyChange(T1,P1,P2) %From basic re-arrangement of Tds equation for constant temperature (changing pressure)
+%             u1 = FluidType.NITROUS_GAS.getSpecificInternalEnergy(T1,P1);
+%             u2 = FluidType.NITROUS_GAS.getSpecificInternalEnergy(T1,P2);
+%             v1 = 1/FluidType.NITROUS_GAS.getDensity(T1,P1);
+%             v2 = 1/FluidType.NITROUS_GAS.getDensity(T1,P2);
+%             integrand = @(v) NitrousFluid.getGasPressure(T1,(1/v));
+%             dP = P2-P1; %Difference in pressure
+%             stepSize = 10000; %Step size to use for numerical integration
+%             steps = ceil(abs(dP / stepSize)); %Number of discrete steps for integration
+%             Tds = (u2-u1) + legendreIntegral(integrand,max(4,steps),v1,v2);
+%             val = Tds ./ T1;
+%         end
+
+%         function val = getGasEntropyChange(T1,P1,P2)
+%             dP = P2-P1; %Difference in pressure
+%             stepSize = 10000; %Step size to use for numerical integration
+%             steps1 = ceil(abs(dP / stepSize)); %Number of discrete steps for integration
+%             integrand1 = @(P) NitrousFluid.entropyIntegrand1(FluidType.NITROUS_GAS,T1,P);
+%             ds = -legendreIntegral(integrand1,max(10,steps1),P1,P2);
+%             val = ds;
+% %            v1 = 1/FluidType.NITROUS_GAS.getDensity(T1,P1);
+% %            v2 = 1/FluidType.NITROUS_GAS.getDensity(T2,P2);
+% %            disp(v2);
+% %            disp(v1);
+% %            dP = P2-P1; %Difference in pressure
+% %            stepSize = 10000; %Step size to use for numerical integration
+% %            steps1 = ceil(abs(dP / stepSize)); %Number of discrete steps for integration
+% %            dV = v2-v1;
+% %            stepSize2 = 0.001;
+% %            steps2 = ceil(abs(dV / stepSize2)); %Number of discrete steps for integration;
+% %            integrand1 = @(P) NitrousFluid.entropyIntegrand1(FluidType.NITROUS_GAS,T1,P);
+% %            integrand2 = @(V) NitrousFluid.entropyIntegrand2(FluidType.NITROUS_GAS,T1,V);
+% %            I1 = -legendreIntegral(integrand1,max(10,steps1),P1,P2);
+% %            I2 = legendreIntegral(integrand2,max(5,steps2),v1,v2);
+% %            disp(I2);
+% %            disp(I1);
+% %            ds = I1 + I2;
+% %            val = ds;
+%         end
+        
+%         function val = entropyIntegrand1(fluidType,T1,P)
+%            smallIncrem = 1*10^-6;
+%            V0 = 1/fluidType.getDensity(T1-smallIncrem,P);
+%            V2 = 1/fluidType.getDensity(T1+smallIncrem,P);
+%            %Central finite difference approximation           
+%            %Partial dV/dT at constant pressure
+%            dVdT = (V2 - V0) / (2*smallIncrem);
+%            val = dVdT;
+%         end
+        
+%         function val = entropyIntegrand2(fluidType,T1,V)
+%            smallIncrem = 1*10^-6;
+%            if(fluidType == FluidType.NITROUS_GAS)
+%                P0 = 1/NitrousFluid.getGasPressure(T1-smallIncrem,1/V);
+%                P2 = 1/NitrousFluid.getGasPressure(T1+smallIncrem,1/V);
+%            elseif(fluidType == FluidType.NITROUS_LIQUID)
+%                P0 = 1/NitrousFluid.getLiquidPressure(T1-smallIncrem,1/V);
+%                P2 = 1/NitrousFluid.getLiquidPressure(T1+smallIncrem,1/V);
+%            end
+%            %Central finite difference approximation           
+%            %Partial dP/dT at constant volume
+%            dPdT = (P2 - P0) / (2*smallIncrem);
+%            val = dPdT;
+%         end
+        
+        %Function to get the pressure (Pa) of the liquid for a given T (K)
+        %and density (kg/m^3)
+        function val = getLiquidPressure(T,density)
+            data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'liquidDensityNISTOnly.txt']); 
+            val = NitrousFluid.twoColInterp(data,1,3,2,T,density) * 1000;
+        end
+        
+        %Function to get the pressure (Pa) of the gas for a given T (K)
+        %and density (kg/m^3)
+        function val = getGasPressure(T,density)
+            data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'gasDensityNISTOnly.txt']); 
+            val = NitrousFluid.twoColInterp(data,1,3,2,T,density) * 1000;
         end
         
         function val = getGasEntropy(T,P)
