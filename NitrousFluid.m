@@ -50,14 +50,14 @@ classdef NitrousFluid
         %Eg. val = twoColLinearInterp(data,indexOfColOfTemp,indexOfColOfPressure,indexOfColOfValueYouWant,temp,pressure);
         %ASSUMES that the data is ordered by indepCol1 and that rows with
         %the same value for indepCol1 are ordered by indepCol2
-        function val = twoColLinearInterp(data,indepCol1,indepCol2,depCol,indepVal1,indepVal2)
+        function val = twoColInterp(data,indepCol1,indepCol2,depCol,indepVal1,indepVal2)
             if (length(indepVal1) > 1) %Handle vector input
                 if(length(indepVal1) ~= length(indepVal2))
                     error('Two col linear interp is not capable of handling input given as differently sized vectors');
                 end
                 val = zeros(1,length(indepVal1));
                 for j=1:length(indepVal1)
-                   val(j) = NitrousFluid.twoColLinearInterp(data,indepCol1,indepCol2,depCol,indepVal1(j),indepVal2(j)); 
+                   val(j) = NitrousFluid.twoColInterp(data,indepCol1,indepCol2,depCol,indepVal1(j),indepVal2(j)); 
                 end
                 return;
             end
@@ -301,7 +301,7 @@ classdef NitrousFluid
         function val = getGasAdiabaticCompressibility(T,P)
             P1 = P/1000; %Need gas in kPa using tabulated data
             data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'gasAdiabaticCompressibility.txt']); 
-            val = NitrousFluid.twoColLinearInterp(data,1,2,3,T,P1); %Returns isothermal compressibility in 1/kPa
+            val = NitrousFluid.twoColInterp(data,1,2,3,T,P1); %Returns isothermal compressibility in 1/kPa
             val = val/1000; %Convert to 1/Pa
         end
         
@@ -311,7 +311,7 @@ classdef NitrousFluid
         function val = getLiquidAdiabaticCompressibility(T,P)
             P1 = P/1000; %Need gas in kPa using tabulated data
             data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'liquidAdiabaticCompressibility.txt']); 
-            val = NitrousFluid.twoColLinearInterp(data,1,2,3,T,P1); %Returns isothermal compressibility in 1/kPa
+            val = NitrousFluid.twoColInterp(data,1,2,3,T,P1); %Returns isothermal compressibility in 1/kPa
             val = val/1000; %Convert to 1/Pa
         end
         
@@ -321,7 +321,7 @@ classdef NitrousFluid
         function val = getGasIsothermalCompressibility(T,P)
             P1 = P/1000; %Need gas in kPa using tabulated data
             data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'gasIsothermalCompressibility.txt']); 
-            val = NitrousFluid.twoColLinearInterp(data,1,2,3,T,P1); %Returns isothermal compressibility in 1/kPa
+            val = NitrousFluid.twoColInterp(data,1,2,3,T,P1); %Returns isothermal compressibility in 1/kPa
             val = val/1000; %Convert to 1/Pa
         end
         
@@ -331,7 +331,7 @@ classdef NitrousFluid
         function val = getLiquidIsothermalCompressibility(T,P)
             P1 = P/1000; %Need gas in kPa using tabulated data
             data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'liquidIsothermalCompressibility.txt']); 
-            val = NitrousFluid.twoColLinearInterp(data,1,2,3,T,P1); %Returns isothermal compressibility in 1/kPa
+            val = NitrousFluid.twoColInterp(data,1,2,3,T,P1); %Returns isothermal compressibility in 1/kPa
             val = val/1000; %Convert to 1/Pa
         end
         
@@ -368,7 +368,7 @@ classdef NitrousFluid
         function val = getLiquidDensity(T,P)
             P1 = P/1000; %Need gas in kPa using tabulated data
             data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'liquidDensity.txt']); 
-            val = NitrousFluid.twoColLinearInterp(data,1,2,3,T,P1);
+            val = NitrousFluid.twoColInterp(data,1,2,3,T,P1);
         end
         
         %Function to get the density of the non-saturated gas (Kg/m^3)
@@ -376,7 +376,7 @@ classdef NitrousFluid
         function val = getGasDensity(T,P)
             P1 = P/1000; %Need gas in kPa using tabulated data
             data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'gasDensity.txt']); 
-            val = NitrousFluid.twoColLinearInterp(data,1,2,3,T,P1);
+            val = NitrousFluid.twoColInterp(data,1,2,3,T,P1);
         end
         
         %Function to get the specific enthalpy of the gas in J/Kg
@@ -486,7 +486,7 @@ classdef NitrousFluid
         function val = getLiquidCp(T,P)
             P1 = P/1000; %Need gas in kPa using tabulated data
             data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'liquidCp.txt']); 
-            val = NitrousFluid.twoColLinearInterp(data,1,2,3,T,P1);
+            val = NitrousFluid.twoColInterp(data,1,2,3,T,P1);
             %Val is in J/K/mol, convert to J/K/Kg
             val = val / NitrousFluid.getMolarMass();
         end
@@ -496,7 +496,7 @@ classdef NitrousFluid
         function val = getGasIsobaricCoeffOfExpansion(T,P)
             P1 = P/1000; %Need gas in kPa using tabulated data
             data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'gasIsobaricCoefficientOfExpansion.txt']); 
-            val = NitrousFluid.twoColLinearInterp(data,1,2,3,T,P1);
+            val = NitrousFluid.twoColInterp(data,1,2,3,T,P1);
         end
         
         %Function to get the isobaric coefficient of expansion (1/K)
@@ -504,7 +504,7 @@ classdef NitrousFluid
         function val = getLiquidIsobaricCoeffOfExpansion(T,P)
             P1 = P/1000; %Need gas in kPa using tabulated data
             data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'liquidIsobaricCoefficientOfExpansion.txt']); 
-            val = NitrousFluid.twoColLinearInterp(data,1,2,3,T,P1);
+            val = NitrousFluid.twoColInterp(data,1,2,3,T,P1);
         end
         
         %Function to get the specific heat capacity at constant volume for the
@@ -539,7 +539,7 @@ classdef NitrousFluid
         function val = getGasCp(T,P)
             P1 = P/1000; %Need gas in kPa using tabulated data
             data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'gasCp.txt']); 
-            val = NitrousFluid.twoColLinearInterp(data,1,2,3,T,P1);
+            val = NitrousFluid.twoColInterp(data,1,2,3,T,P1);
             %Val is in J/K/mol, convert to J/K/Kg
             val = val / NitrousFluid.getMolarMass();
         end
@@ -565,7 +565,7 @@ classdef NitrousFluid
         function val = getGasEntropy(T,P)
             P1 = P/1000; %Need gas in kPa using tabulated data
             data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'entropyGas.txt']); 
-            val = NitrousFluid.twoColLinearInterp(data,1,2,3,T,P1);
+            val = NitrousFluid.twoColInterp(data,1,2,3,T,P1);
             %Val is in J/K/mol, convert to J/K/Kg
             val = val / NitrousFluid.getMolarMass();
         end
