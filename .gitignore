@@ -4,3 +4,4 @@
 # MATLAB Autosave
 .m~
 .asv
+*.asv

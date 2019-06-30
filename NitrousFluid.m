@@ -11,7 +11,14 @@ classdef NitrousFluid
         %Function to linearly interpolate fastly with one column acting as
         %independent variable (Eg. input, eg. temp) and one column acting
         %as dependent variable (Eg. output, eg. Enthalpy)
-        function val = oneColLinearInterp(data,indepCol1,depCol,indepVal1)
+        function val = oneColInterp(data,indepCol1,depCol,indepVal1)
+            if (length(indepVal1) > 1) %Handle vector input
+                val = zeros(1,length(indepVal1));
+                for j=1:length(indepVal1)
+                   val(j) = NitrousFluid.oneColInterp(data,indepCol1,depCol,indepVal1(j)); 
+                end
+                return;
+            end
             %Find indexes of positions in list either side of correct value
             %for indepVal1
             [~,indexLowerBound,indexUpperBound,~] = NitrousFluid.binarySearch(data,indepCol1,indepVal1);
@@ -20,8 +27,21 @@ classdef NitrousFluid
             lowerBoundDepVal = data(indexLowerBound,depCol); %Lower bound of dependent val
             upperBoundDepVal = data(indexUpperBound,depCol);
             
-            %Linearly interpolate
-            val = NitrousFluid.linearInterp(lowerBoundIndepVal,upperBoundIndepVal,lowerBoundDepVal,upperBoundDepVal,indepVal1);
+            %Come up with a third index to do a cubic interpolation
+            thirdIndex = indexLowerBound -1; %Data point before bounded region
+            if(thirdIndex < 1) %If doesn't exist use data point after bounded region
+               thirdIndex = indexUpperBound+1; 
+            end
+            dataSize = size(data);
+            if(thirdIndex > dataSize(1)) %No possible third data point
+                thirdIndex = indexLowerBound; %Make third data point the same as the first
+            end
+            thirdPtIndepVal = data(thirdIndex,indepCol1);
+            thirdPtDepVal = data(thirdIndex, depCol);
+            
+            %Cubic interpolate
+            %val = NitrousFluid.linearInterp(lowerBoundIndepVal,upperBoundIndepVal,lowerBoundDepVal,upperBoundDepVal,indepVal1);
+            val = NitrousFluid.cubicInterp(lowerBoundIndepVal,upperBoundIndepVal,thirdPtIndepVal,lowerBoundDepVal,upperBoundDepVal,thirdPtDepVal, indepVal1);
         end
         
         %Function to linearly interpolate fastly with two columns acting as
@@ -31,6 +51,16 @@ classdef NitrousFluid
         %ASSUMES that the data is ordered by indepCol1 and that rows with
         %the same value for indepCol1 are ordered by indepCol2
         function val = twoColLinearInterp(data,indepCol1,indepCol2,depCol,indepVal1,indepVal2)
+            if (length(indepVal1) > 1) %Handle vector input
+                if(length(indepVal1) ~= length(indepVal2))
+                    error('Two col linear interp is not capable of handling input given as differently sized vectors');
+                end
+                val = zeros(1,length(indepVal1));
+                for j=1:length(indepVal1)
+                   val(j) = NitrousFluid.twoColLinearInterp(data,indepCol1,indepCol2,depCol,indepVal1(j),indepVal2(j)); 
+                end
+                return;
+            end
             %Find indexes of positions in list either side of correct value
             %for indepVal1
             [indep1StartIndexLower,indep1EndIndexLower,indep1StartIndexUpper,indep1EndIndexUpper] = NitrousFluid.binarySearch(data,indepCol1,indepVal1);
@@ -39,39 +69,45 @@ classdef NitrousFluid
             
             dataAtIndep1Lower = data(indep1StartIndexLower:indep1EndIndexLower,:); %All the data for when indepdent column 1 is the lower bound value. Eg. this is all values where T=T_lower_bound
             dataAtIndep1Upper = data(indep1StartIndexUpper:indep1EndIndexUpper,:); %All the data for when indepdent column 1 is the upper bound value. Eg. this is all values where T=T_upper_bound
+            %Interpolated second column values at each of the first columns
+            %required for the second interpolation (Use these values for
+            %2nd interpolation)
+            valLower = NitrousFluid.oneColInterp(dataAtIndep1Lower,2,3,indepVal2);
+            valUpper = NitrousFluid.oneColInterp(dataAtIndep1Upper,2,3,indepVal2);
             
-            %Find the values either side of desired point for the sub list
-            %where col1=lower-bound
-            [~,indep2LowerBoundIndex,indep2UpperBoundIndex,~] = NitrousFluid.binarySearch(dataAtIndep1Lower,indepCol2,indepVal2);
-            indep2LowerBoundIndex = indep2LowerBoundIndex+indep1StartIndexLower-1; %Shift index to be valid for whole dataset, not just subset
-            indep2UpperBoundIndex = indep2UpperBoundIndex+indep1StartIndexLower-1; %Shift index to be valid for whole dataset, not just subset
-            
-            %Linearly interpolate on col2 for the dataset for constant
-            %col1, to get lower bound value for second linear interpolation
-            %for later
-            try
-                valLower = NitrousFluid.linearInterp(data(indep2LowerBoundIndex,indepCol2), data(indep2UpperBoundIndex,indepCol2), data(indep2LowerBoundIndex,depCol), data(indep2UpperBoundIndex,depCol), indepVal2);
-            catch exception
-                disp("indep2LowerBoundIndex: "+indep2LowerBoundIndex+", indepCol2: "+indepCol2+", indep2UpperBoundIndex: "+indep2UpperBoundIndex+ " depCol: "+depCol+" indepVal2: "+indepVal2);
-                rethrow(exception)
+            %Need to find a third indep1 for cubic interpolation
+            dataSize = size(data);
+            if(indep1StartIndexLower - 1 < 1) %If no data points for earlier values of indep1
+                if(indep1EndIndexUpper+1>dataSize(1)) %No data points for later values of indep1
+                    %No other data points to grab, so just linearly
+                    %interpolate
+                    %Linearly interpolate on col1 to get final interpolated result
+                    val = NitrousFluid.linearInterp(indep1Lower,indep1Upper,valLower,valUpper,indepVal1);
+                    return;
+                end
+                
+                %Use data points for later values of indep1
+                thirdPtStartIndex = indep1EndIndexUpper+1;
+                thirdPtEndIndex = thirdPtStartIndex; %Init end index of range for data which has same value of indep1 at start index
+                while (thirdPtEndIndex <= dataSize(1) && data(thirdPtEndIndex,indepCol1) == data(thirdPtStartIndex,indepCol1)) %Go through data until find different value of indep1
+                    thirdPtEndIndex = thirdPtEndIndex+1;
+                end
+                thirdPtEndIndex = thirdPtEndIndex-1; %Make the end index the final index that had the same value of indep1
+            else %Data points for earlier values of indep1, use these for our third interpolation point
+                thirdPtEndIndex = indep1StartIndexLower - 1;
+                thirdPtStartIndex = thirdPtEndIndex; %Init start index of range for data which same value of indep1 at the end index
+                while (thirdPtStartIndex >= 1 && data(thirdPtStartIndex,indepCol1) == data(thirdPtEndIndex,indepCol1)) %Go through data until find different value of indep1
+                    thirdPtStartIndex = thirdPtStartIndex - 1;
+                end
+                thirdPtStartIndex = thirdPtStartIndex+1;
             end
+            dataAtThirdIndep1 = data(thirdPtStartIndex:thirdPtEndIndex,:);
+            thirdIndep1 = data(thirdPtStartIndex,indepCol1);
+            valThird = NitrousFluid.oneColInterp(dataAtThirdIndep1,2,3,indepVal2);
             
-            %Find the values either side of desired point for the sub list
-            %where col1=upper-bound
-            [~,indep2LowerBoundIndex,indep2UpperBoundIndex,~] = NitrousFluid.binarySearch(dataAtIndep1Upper,indepCol2,indepVal2);
-            indep2LowerBoundIndex = indep2LowerBoundIndex+indep1StartIndexUpper-1; %Shift index to be valid for whole dataset, not just subset
-            indep2UpperBoundIndex = indep2UpperBoundIndex+indep1StartIndexUpper-1; %Shift index to be valid for whole dataset, not just subset
-            %Linearly interpolate on col2 for the dataset for constant
-            %col1, to get upper bound value for second linear interpolation
-            %for later
-            try
-                valUpper = NitrousFluid.linearInterp(data(indep2LowerBoundIndex,indepCol2), data(indep2UpperBoundIndex,indepCol2), data(indep2LowerBoundIndex,depCol), data(indep2UpperBoundIndex,depCol), indepVal2);
-            catch exception
-                disp("indep2LowerBoundIndex: "+indep2LowerBoundIndex+", indepCol2: "+indepCol2+", indep2UpperBoundIndex: "+indep2UpperBoundIndex+ " depCol: "+depCol+" indepVal2: "+indepVal2);
-                rethrow(exception)
-            end
-            %Linearly interpolate on col1 to get final interpolated result
-            val = NitrousFluid.linearInterp(indep1Lower,indep1Upper,valLower,valUpper,indepVal1);
+            %Interpolate on col1 to get final interpolated result
+            val = NitrousFluid.cubicInterp(indep1Lower,indep1Upper,thirdIndep1,valLower,valUpper,valThird,indepVal1);
+            %val = NitrousFluid.linearInterp(indep1Lower,indep1Upper,valLower,valUpper,indepVal1);
         end
         
         %Simple linear interpolation function
@@ -81,6 +117,13 @@ classdef NitrousFluid
                 return;
             end
             val = ((x-x1)./(x2-x1)).*(y2-y1) + y1;
+        end
+        
+        %Simple cubic interpolation function
+        function val = cubicInterp(x1,x2,x3,y1,y2,y3,x)
+            xVals = [x1,x2,x3];
+            yVals = [y1,y2,y3];
+            val = pchip(xVals,yVals,x); %Piecewise Cubic Hermite Interpolating Polynomial (PCHIP)
         end
         
         %Function to use modified binary search on column with index 'colIndex' within ordered dataset 'data'
@@ -505,7 +548,7 @@ classdef NitrousFluid
         %at a given Temp (K) and Pressure (Pa)
         function val = getSaturatedHeatCapacity(T)
             data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'saturationHeatCapacity.txt'],3); 
-            val = NitrousFluid.oneColLinearInterp(data,1,2,T);
+            val = NitrousFluid.oneColInterp(data,1,2,T);
             %Val is in J/K/mol, convert to J/K/Kg
             val = val / NitrousFluid.getMolarMass();
         end
@@ -514,7 +557,7 @@ classdef NitrousFluid
         %gas in a saturated state
         function val = getSaturatedLiquidEntropy(T)
             data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'entropySaturation.txt'],3); 
-            val = NitrousFluid.oneColLinearInterp(data,1,2,T);
+            val = NitrousFluid.oneColInterp(data,1,2,T);
             %Val is in J/K/mol, convert to J/K/Kg
             val = val / NitrousFluid.getMolarMass();
         end
