@@ -132,6 +132,10 @@ classdef NitrousFluid
         
         %Simple cubic interpolation function
         function val = cubicInterp(x1,x2,x3,y1,y2,y3,x)
+            if (x3 == x1 || x3 == x2) %No third data point, so are re-using a 2nd data point
+                val = NitrousFluid.linearInterp(x1,x2,y1,y2,x); %Linearly interpolate instead
+                return;
+            end
             xVals = [x1,x2,x3];
             yVals = [y1,y2,y3];
             val = spline(xVals,yVals,x); %Piecewise Cubic Interpolating Polynomial
