@@ -40,6 +40,15 @@ classdef NitrousFluid
             thirdPtDepVal = data(thirdIndex, depCol);
             
             %Cubic interpolate
+%             if indepVal1 < lowerBoundIndepVal || indepVal1 > upperBoundIndepVal
+%                disp("Interpolating outside of range"); 
+%                disp("1: "+lowerBoundIndepVal+" > "+lowerBoundDepVal);
+%                disp("2: "+upperBoundIndepVal+" > "+upperBoundDepVal);
+%                disp("3: "+thirdPtIndepVal+" > "+thirdPtDepVal);
+%                disp("Indep val: "+indepVal1);
+% %                val = NitrousFluid.linearInterp(lowerBoundIndepVal,upperBoundIndepVal,lowerBoundDepVal,upperBoundDepVal,indepVal1);
+% %                 return;
+%             end
             %val = NitrousFluid.linearInterp(lowerBoundIndepVal,upperBoundIndepVal,lowerBoundDepVal,upperBoundDepVal,indepVal1);
             val = NitrousFluid.cubicInterp(lowerBoundIndepVal,upperBoundIndepVal,thirdPtIndepVal,lowerBoundDepVal,upperBoundDepVal,thirdPtDepVal, indepVal1);
         end
@@ -74,6 +83,8 @@ classdef NitrousFluid
             %2nd interpolation)
             valLower = NitrousFluid.oneColInterp(dataAtIndep1Lower,2,3,indepVal2);
             valUpper = NitrousFluid.oneColInterp(dataAtIndep1Upper,2,3,indepVal2);
+            
+            %disp(data);
             
             %Need to find a third indep1 for cubic interpolation
             dataSize = size(data);
@@ -123,7 +134,7 @@ classdef NitrousFluid
         function val = cubicInterp(x1,x2,x3,y1,y2,y3,x)
             xVals = [x1,x2,x3];
             yVals = [y1,y2,y3];
-            val = pchip(xVals,yVals,x); %Piecewise Cubic Hermite Interpolating Polynomial (PCHIP)
+            val = spline(xVals,yVals,x); %Piecewise Cubic Interpolating Polynomial
         end
         
         %Function to use modified binary search on column with index 'colIndex' within ordered dataset 'data'
@@ -367,7 +378,7 @@ classdef NitrousFluid
         %at a given Temp (K) and Pressure (Pa)
         function val = getLiquidDensity(T,P)
             P1 = P/1000; %Need gas in kPa using tabulated data
-            data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'liquidDensity.txt']); 
+            data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'liquidDensityNISTOnly.txt']); 
             val = NitrousFluid.twoColInterp(data,1,2,3,T,P1);
         end
         
@@ -375,7 +386,7 @@ classdef NitrousFluid
         %at a given Temp (K) and Pressure (Pa)
         function val = getGasDensity(T,P)
             P1 = P/1000; %Need gas in kPa using tabulated data
-            data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'gasDensity.txt']); 
+            data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'gasDensityNISTOnly.txt']); 
             val = NitrousFluid.twoColInterp(data,1,2,3,T,P1);
         end
         
@@ -386,20 +397,11 @@ classdef NitrousFluid
             %Pressure of the saturated gas
             P1 = SaturatedNitrous.getVapourPressure(T);
             dP = P-P1; %Difference in pressure
-            stepSize = 100; %Step size to use for numerical integration
+            stepSize = 10000; %Step size to use for numerical integration
             steps = ceil(abs(dP / stepSize)); %Number of discrete steps for integration
-            %fprintf(['Steps: ',num2str(steps),'\n']);
-            dP = dP / steps; %Change in P per step
             
-            dh = 0;%Difference in enthalpy from saturation value
-            %Numerically integrate v(1-aT)dP
-            for i=1:steps
-               Pi = P1 + dP*i; %Pressure at this point
-               v = 1/NitrousFluid.getGasDensity(T,Pi); %Specific vol at this point
-               a = NitrousFluid.getGasIsobaricCoeffOfExpansion(T,Pi); %a at this point, isobaric coefficient of expansion
-               dh = dh + v*(1-a*T)*dP;
-            end
-            %fprintf(['dh: ',num2str(dh),'\n']);
+            integrand = @(Pi) (1/NitrousFluid.getGasDensity(T,Pi))*(1-(NitrousFluid.getGasIsobaricCoeffOfExpansion(T,Pi))*T);
+            dh = legendreIntegral(integrand,max(10,steps),P1,P);
             
             val = valSat + dh;
         end
@@ -411,20 +413,11 @@ classdef NitrousFluid
             %Pressure of the saturated gas
             P1 = SaturatedNitrous.getVapourPressure(T);
             dP = P-P1; %Difference in pressure
-            stepSize = 1000; %Step size to use for numerical integration
+            stepSize = 10000; %Step size to use for numerical integration
             steps = ceil(abs(dP / stepSize)); %Number of discrete steps for integration
-            %fprintf(['Steps: ',num2str(steps),'\n']);
-            dP = dP / steps; %Change in P per step
             
-            dh = 0;%Difference in enthalpy from saturation value
-            %Numerically integrate v(1-aT)dP
-            for i=1:steps
-               Pi = P1 + dP*i; %Pressure at this point
-               v = 1/NitrousFluid.getLiquidDensity(T,Pi); %Specific vol at this point
-               a = NitrousFluid.getLiquidIsobaricCoeffOfExpansion(T,Pi); %a at this point, isobaric coefficient of expansion
-               dh = dh + v*(1-a*T)*dP;
-            end
-            %fprintf(['dh: ',num2str(dh),'\n']);
+            integrand = @(Pi) (1/NitrousFluid.getLiquidDensity(T,Pi))*(1-(NitrousFluid.getLiquidIsobaricCoeffOfExpansion(T,Pi))*T);
+            dh = legendreIntegral(integrand,max(10,steps),P1,P);
             
             val = valSat + dh;
         end

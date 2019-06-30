@@ -72,34 +72,22 @@ classdef FluidType
        %Uses dh = CpdT + [v(1-aT)]dP
        function val = predictEnthalpy(obj,knownH,knownT,knownP,T,P)
             dP = P-knownP; %Difference in pressure
-            stepSize = 1000; %Step size to use for numerical integration
-            steps = ceil(dP / stepSize); %Number of discrete steps for integration
-            %fprintf(['Steps: ',num2str(steps),'\n']);
-            dP = dP / steps; %Change in P per step
+            stepSize = 10000; %Step size to use for numerical integration
+            steps = ceil(abs(dP / stepSize)); %Number of discrete steps for integration
             
-            dh = 0;%Difference in enthalpy from saturation value
-            %Numerically integrate v(1-aT)dP at constant T
-            for i=1:steps
-               Pi = knownP + dP*i; %Pressure at this point
-               v = 1/obj.getDensity(knownT,Pi); %Specific vol at this point
-               a = obj.isobaricCoeffOfExpansionHandle(T,Pi); %a at this point, isobaric coefficient of expansion
-               dh = dh + v*(1-a*T)*dP;
-            end
+            integrand = @(Pi) (1/obj.getDensity(knownT,Pi))*(1-(obj.isobaricCoeffOfExpansionHandle(T,Pi))*T);
+            dh1 = legendreIntegral(integrand,max(10,steps),SaturatedNitrous.getVapourPressure(T),P);
             
             %Numerically integrate CpdT at constant P
             dT = T-knownT;
-            stepSize = 1000;
+            stepSize = 10000;
             steps = ceil(abs(dT / stepSize));
-            dT = dT / steps;
             
-            for i=1:steps
-               Ti = knownT + dT*i;
-               Cp = obj.getCp(Ti,knownP);
-               dh = dh + Cp*dT;
-            end
+            integrand2 = @(Ti) obj.getCp(Ti,knownP);
+            dh2 = legendreIntegral(integrand2,max(10,steps),knownT,T);
             %fprintf(['dh: ',num2str(dh),'\n']);
             
-            val = knownH + dh; 
+            val = knownH + dh1 + dh2; 
        end
        
        %Get the Cv of the gas using method supplied by gas
