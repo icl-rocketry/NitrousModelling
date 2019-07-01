@@ -78,13 +78,13 @@ classdef NitrousFluid
             
             dataAtIndep1Lower = data(indep1StartIndexLower:indep1EndIndexLower,:); %All the data for when indepdent column 1 is the lower bound value. Eg. this is all values where T=T_lower_bound
             dataAtIndep1Upper = data(indep1StartIndexUpper:indep1EndIndexUpper,:); %All the data for when indepdent column 1 is the upper bound value. Eg. this is all values where T=T_upper_bound
+            
             %Interpolated second column values at each of the first columns
             %required for the second interpolation (Use these values for
             %2nd interpolation)
             valLower = NitrousFluid.oneColInterp(dataAtIndep1Lower,indepCol2,depCol,indepVal2);
             valUpper = NitrousFluid.oneColInterp(dataAtIndep1Upper,indepCol2,depCol,indepVal2);
-            
-            %disp(data);
+%             disp(data(:,2:3));
             
             %Need to find a third indep1 for cubic interpolation
             dataSize = size(data);
@@ -114,7 +114,7 @@ classdef NitrousFluid
             end
             dataAtThirdIndep1 = data(thirdPtStartIndex:thirdPtEndIndex,:);
             thirdIndep1 = data(thirdPtStartIndex,indepCol1);
-            valThird = NitrousFluid.oneColInterp(dataAtThirdIndep1,2,3,indepVal2);
+            valThird = NitrousFluid.oneColInterp(dataAtThirdIndep1,indepCol2,depCol,indepVal2);
             
             %Interpolate on col1 to get final interpolated result
             val = NitrousFluid.cubicInterp(indep1Lower,indep1Upper,thirdIndep1,valLower,valUpper,valThird,indepVal1);
@@ -149,6 +149,10 @@ classdef NitrousFluid
             [numRows,~] = size(data);
             domainStart = 1; %Index of the start of the list used for binary search
             domainEnd = numRows; %Index of the end of the list used for binary search
+            increasing = true;
+            if (length(data) > 1 && data(2,colIndex) < data(1,colIndex)) %If data in descending order
+               increasing = false; 
+            end
             found = false;
             while ~found
                 midIndex = ceil((domainStart + domainEnd) / 2);
@@ -158,7 +162,7 @@ classdef NitrousFluid
                 %val - so that the value being found by the search is the lower of the
                 %two required for linearly interpolating
                 valueFound = data(midIndex,colIndex);
-                if valueFound <= val
+                if (increasing && valueFound <= val) || (~increasing && valueFound >= val)
                     %check if found
                     for i=midIndex+1:numRows %Iterate through list starting at midIndex
                         if data(i,colIndex) == valueFound && i~=numRows %If value is the same as at midIndex and we are not yet at the end of the list
@@ -167,7 +171,7 @@ classdef NitrousFluid
                         %i is now the index of the first element in the
                         %list after midIndex that is larger, or we have
                         %reached the end of the list
-                        if data(i,colIndex) >= val %val is between value at position i and value at position (i-1), yay!
+                        if (data(i,colIndex) >= val && increasing) || (~increasing && data(i,colIndex) <= val) %val is between value at position i and value at position (i-1), yay!
                             found = true;
                             startIndexUpper = i; %We know that i is the index of the left-most smallest value larger than val in the list
                             endIndexLower = i-1; %We know that i-1 is the index of the right-most largest value smaller than val in the list
@@ -195,7 +199,7 @@ classdef NitrousFluid
                     %3rd values in list
                     MAX_INTERP_OUTSIDEOFRANGE_NO_WARN  = 5*abs(data(3,colIndex) - data(2,colIndex));
                 end
-                if val >= data(numRows,colIndex) %Val is bigger than largest in dataset
+                if (increasing && val >= data(numRows,colIndex)) || (~increasing && val <= data(numRows,colIndex)) %Val is bigger than largest in dataset
                     amountOutsideRange = abs(val - data(numRows,colIndex));
                     if ~NitrousFluid.SUPPRESS_OUT_OF_RANGE_WARNINGS && amountOutsideRange > MAX_INTERP_OUTSIDEOFRANGE_NO_WARN
                         warning(['Value ',num2str(val),' is outside of dataset, closest value is ',num2str(data(numRows,colIndex)),'. Interpolation may be less accurate']);
@@ -215,7 +219,7 @@ classdef NitrousFluid
                             break; %Stop iterating, now startIndexUpper is at correct value
                         end
                     end
-                elseif val <= data(1,colIndex) %Val is smaller than smallest in dataset
+                elseif (increasing && val <= data(1,colIndex)) || (~increasing && val >= data(1,colIndex)) %Val is smaller than smallest in dataset
                     amountOutsideRange = abs(data(1,colIndex)-val);
                     if ~NitrousFluid.SUPPRESS_OUT_OF_RANGE_WARNINGS && amountOutsideRange > MAX_INTERP_OUTSIDEOFRANGE_NO_WARN
                         warning(['Value ',num2str(val),' is outside of dataset, closest value is ',num2str(data(1,colIndex)),'. Interpolation may be less accurate']);
@@ -290,16 +294,21 @@ classdef NitrousFluid
                    %what this is
                    regex = '(.+?)';
                    for j=1:numCols-1
-                       regex = [regex,'\s+(.+?)'];
+                       regex = [regex,'\s+(.+'];
+                       if(j ~= numCols-1)
+                          regex = [regex,'?)']; 
+                       else
+                          regex = [regex,')']; 
+                       end
                    end
                    tokens = regexp(lineRead,regex,'tokens'); %Capture groups from the regex as an array
                    for i=1:numCols %For each col, 1 to 4
                         %Put into matrix the numeric value captured by this
                         %token
                         fileData(lineNum,i) = str2double(tokens{1}{i});
-                        if isnan(fileData(lineNum,i))
-                           disp(tokens{1}{i});
-                        end
+%                         if isnan(fileData(lineNum,i))
+%                            disp(tokens{1}{i});
+%                         end
                    end
                    lineNum = lineNum+1;
                end
@@ -502,6 +511,36 @@ classdef NitrousFluid
             P1 = P/1000; %Need gas in kPa using tabulated data
             data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'liquidIsobaricCoefficientOfExpansion.txt']); 
             val = NitrousFluid.twoColInterp(data,1,2,3,T,P1);
+        end
+        
+        %Function to get the temperature (K) of the gas for a given
+        %pressure (Pa) and specific entropy (J/K/Kg)
+        function val = getGasTemperatureForPressureEntropy(P,s)
+            data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'entropyGas2.txt'],3); 
+            val = NitrousFluid.twoColInterp(data,1,3,2,P,s);
+        end
+        
+        %Function to get the pressure (Pa) of the gas for a given
+        %temperature (T) and specific entropy (J/K/Kg)
+        function val = getGasPressureForTemperatureEntropy(T,s)
+            s = s*NitrousFluid.getMolarMass(); %Convert to J/K/mol
+            data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'entropyGas.txt'],4);
+            val = NitrousFluid.twoColInterp(data,1,3,2,T,s) * 1000;
+        end
+        
+        %Function to get the temperature (T) of the saturated liquid for a
+        %given specific entropy (J/K/Kg)
+        function val = getSaturatedLiquidTemperatureFromEntropy(s)
+            s = s*NitrousFluid.getMolarMass(); %Convert to J/K/mol
+            data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'entropySaturation.txt'],3);
+            val = NitrousFluid.oneColInterp(data,2,1,s);
+        end
+        
+        %Function to get the pressure (P) of the saturated liquid for a
+        %given specific entropy (J/K/Kg)
+        function val = getSaturatedLiquidPressureFromEntropy(s)
+            T = NitrousFluid.getSaturatedLiquidTemperatureFromEntropy(s);
+            val = FluidType.NITROUS_LIQUID.getVapourPressure(T);
         end
         
         %Function to get the specific heat capacity at constant volume for the

@@ -1,15 +1,17 @@
 %Enumeration to represent types of fluids
 classdef FluidType
    enumeration
-      AIR(@(T,P) 1005,@(T,P) 718, @(T,P) P/(287*T),287, @(T,P) sqrt(1.401*287*T), @(P) error('Unsupported'), @(T,P) 1005 * T, @(T,P) error('Unsupported'),@(T,P) error('Unsupported')), 
-      NITROUS_LIQUID(@NitrousFluid.getLiquidCp,@NitrousFluid.getLiquidCv,@NitrousFluid.getLiquidDensity,@NitrousFluid.getGasConstant,@NitrousFluid.getLiquidSpeedOfSound,@SaturatedNitrous.getVapourPressure,@NitrousFluid.getLiquidSpecificEnthalpy, @NitrousFluid.getLiquidIsobaricCoeffOfExpansion,@NitrousFluid.getSaturatedLiquidEntropy), 
-      NITROUS_GAS(@NitrousFluid.getGasCp,@NitrousFluid.getGasCv,@NitrousFluid.getGasDensity,@NitrousFluid.getGasConstant,@NitrousFluid.getGasSpeedOfSound,@SaturatedNitrous.getVapourPressure,@NitrousFluid.getGasSpecificEnthalpy, @NitrousFluid.getGasIsobaricCoeffOfExpansion,@NitrousFluid.getGasEntropy);
+      AIR(@(T,P) 1005,@(T,P) 718, @(T,P) P/(287*T),287, @(T,P) sqrt(1.401*287*T), @(P) error('Unsupported'), @(T,P) 1005 * T, @(T,P) error('Unsupported'),@(T,P) error('Unsupported'),@(T,s) error('Unsupported'),@(P,s) error('Unsupported')), 
+      NITROUS_LIQUID(@NitrousFluid.getLiquidCp,@NitrousFluid.getLiquidCv,@NitrousFluid.getLiquidDensity,@NitrousFluid.getGasConstant,@NitrousFluid.getLiquidSpeedOfSound,@SaturatedNitrous.getVapourPressure,@NitrousFluid.getLiquidSpecificEnthalpy, @NitrousFluid.getLiquidIsobaricCoeffOfExpansion,@NitrousFluid.getSaturatedLiquidEntropy,@NitrousFluid.getSaturatedLiquidPressureFromEntropy,@NitrousFluid.getSaturatedLiquidTemperatureFromEntropy), 
+      NITROUS_GAS(@NitrousFluid.getGasCp,@NitrousFluid.getGasCv,@NitrousFluid.getGasDensity,@NitrousFluid.getGasConstant,@NitrousFluid.getGasSpeedOfSound,@SaturatedNitrous.getVapourPressure,@NitrousFluid.getGasSpecificEnthalpy, @NitrousFluid.getGasIsobaricCoeffOfExpansion,@NitrousFluid.getGasEntropy,@NitrousFluid.getGasPressureForTemperatureEntropy,@NitrousFluid.getGasTemperatureForPressureEntropy);
    end
    properties
       CpHandle;
       CvHandle;
       enthalpyHandle;
       entropyHandle;
+      pressureFromTempEntropyHandle;
+      temperatureFromPressureEntropyHandle;
       densityHandle;
       gasConstant;
       speedOfSoundHandle;
@@ -17,7 +19,7 @@ classdef FluidType
       isobaricCoeffOfExpansionHandle;
    end
    methods
-       function obj = FluidType(CpHandle,CvHandle,densityHandle,gasConstant,speedOfSoundHandle,vapourPressureHandle,enthalpyHandle,isobaricCoeffOfExpansionHandle,entropyHandle)
+       function obj = FluidType(CpHandle,CvHandle,densityHandle,gasConstant,speedOfSoundHandle,vapourPressureHandle,enthalpyHandle,isobaricCoeffOfExpansionHandle,entropyHandle,pressureFromTempEntropyHandle,temperatureFromPressureEntropyHandle)
          obj.CpHandle = CpHandle;
          obj.CvHandle = CvHandle;
          obj.densityHandle = densityHandle;
@@ -27,6 +29,8 @@ classdef FluidType
          obj.enthalpyHandle = enthalpyHandle;
          obj.isobaricCoeffOfExpansionHandle = isobaricCoeffOfExpansionHandle;
          obj.entropyHandle = entropyHandle;
+         obj.pressureFromTempEntropyHandle = pressureFromTempEntropyHandle;
+         obj.temperatureFromPressureEntropyHandle = temperatureFromPressureEntropyHandle;
        end
        
        function P = getVapourPressure(obj,T)
@@ -243,6 +247,22 @@ classdef FluidType
                 s = obj.entropyHandle(T,P);
             catch
                 s = obj.entropyHandle(T);
+            end
+        end
+        
+        function P = getPressureFromTemperatureEntropy(obj,T,s)
+            try 
+                P = obj.pressureFromTempEntropyHandle(T,s); 
+            catch
+                P = obj.pressureFromTempEntropyHandle(s); 
+            end
+        end
+        
+        function T = getTemperatureFromPressureEntropy(obj,P,s)
+            try 
+                T = obj.temperatureFromPressureEntropyHandle(P,s); 
+            catch
+                T = obj.temperatureFromPressureEntropyHandle(s);  
             end
         end
         
