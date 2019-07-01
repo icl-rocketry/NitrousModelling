@@ -1,9 +1,9 @@
 %Enumeration to represent types of fluids
 classdef FluidType
    enumeration
-      AIR(@(T,P) 1005,@(T,P) 718, @(T,P) P/(287*T),287, @(T,P) sqrt(1.401*287*T), @(P) error('Unsupported'), @(T,P) 1005 * T, @(T,P) error('Unsupported'),@(T,P) error('Unsupported'),@(T,s) error('Unsupported'),@(P,s) error('Unsupported')), 
-      NITROUS_LIQUID(@NitrousFluid.getLiquidCp,@NitrousFluid.getLiquidCv,@NitrousFluid.getLiquidDensity,@NitrousFluid.getGasConstant,@NitrousFluid.getLiquidSpeedOfSound,@SaturatedNitrous.getVapourPressure,@NitrousFluid.getLiquidSpecificEnthalpy, @NitrousFluid.getLiquidIsobaricCoeffOfExpansion,@NitrousFluid.getSaturatedLiquidEntropy,@NitrousFluid.getSaturatedLiquidPressureFromEntropy,@NitrousFluid.getSaturatedLiquidTemperatureFromEntropy), 
-      NITROUS_GAS(@NitrousFluid.getGasCp,@NitrousFluid.getGasCv,@NitrousFluid.getGasDensity,@NitrousFluid.getGasConstant,@NitrousFluid.getGasSpeedOfSound,@SaturatedNitrous.getVapourPressure,@NitrousFluid.getGasSpecificEnthalpy, @NitrousFluid.getGasIsobaricCoeffOfExpansion,@NitrousFluid.getGasEntropy,@NitrousFluid.getGasPressureForTemperatureEntropy,@NitrousFluid.getGasTemperatureForPressureEntropy);
+      AIR(@(T,P) 1005,@(T,P) 718, @(T,P) P/(287*T),287, @(T,P) sqrt(1.401*287*T), @(P) error('Unsupported'), @(T,P) 1005 * T, @(T,P) error('Unsupported'),@(T,P) error('Unsupported'),@(T,s) error('Unsupported'),@(P,s) error('Unsupported'),@(T,s) error('Unsupported'),@(P,s) error('Unsupported')), 
+      NITROUS_LIQUID(@NitrousFluid.getLiquidCp,@NitrousFluid.getLiquidCv,@NitrousFluid.getLiquidDensity,@NitrousFluid.getGasConstant,@NitrousFluid.getLiquidSpeedOfSound,@SaturatedNitrous.getVapourPressure,@NitrousFluid.getLiquidSpecificEnthalpy, @NitrousFluid.getLiquidIsobaricCoeffOfExpansion,@NitrousFluid.getSaturatedLiquidEntropy,@NitrousFluid.getSaturatedLiquidPressureFromEntropy,@NitrousFluid.getSaturatedLiquidTemperatureFromEntropy,@NitrousFluid.getLiquidPressureForTemperatureEnthalpy,@NitrousFluid.getLiquidTemperatureForPressureEnthalpy), 
+      NITROUS_GAS(@NitrousFluid.getGasCp,@NitrousFluid.getGasCv,@NitrousFluid.getGasDensity,@NitrousFluid.getGasConstant,@NitrousFluid.getGasSpeedOfSound,@SaturatedNitrous.getVapourPressure,@NitrousFluid.getGasSpecificEnthalpy, @NitrousFluid.getGasIsobaricCoeffOfExpansion,@NitrousFluid.getGasEntropy,@NitrousFluid.getGasPressureForTemperatureEntropy,@NitrousFluid.getGasTemperatureForPressureEntropy,@NitrousFluid.getGasPressureForTemperatureEnthalpy,@NitrousFluid.getGasTemperatureForPressureEnthalpy);
    end
    properties
       CpHandle;
@@ -12,6 +12,8 @@ classdef FluidType
       entropyHandle;
       pressureFromTempEntropyHandle;
       temperatureFromPressureEntropyHandle;
+      pressureFromTempEnthalpyHandle;
+      temperatureFromPressureEnthalpyHandle;
       densityHandle;
       gasConstant;
       speedOfSoundHandle;
@@ -19,7 +21,7 @@ classdef FluidType
       isobaricCoeffOfExpansionHandle;
    end
    methods
-       function obj = FluidType(CpHandle,CvHandle,densityHandle,gasConstant,speedOfSoundHandle,vapourPressureHandle,enthalpyHandle,isobaricCoeffOfExpansionHandle,entropyHandle,pressureFromTempEntropyHandle,temperatureFromPressureEntropyHandle)
+       function obj = FluidType(CpHandle,CvHandle,densityHandle,gasConstant,speedOfSoundHandle,vapourPressureHandle,enthalpyHandle,isobaricCoeffOfExpansionHandle,entropyHandle,pressureFromTempEntropyHandle,temperatureFromPressureEntropyHandle,pressureFromTempEnthalpyHandle,temperatureFromPressureEnthalpyHandle)
          obj.CpHandle = CpHandle;
          obj.CvHandle = CvHandle;
          obj.densityHandle = densityHandle;
@@ -31,6 +33,8 @@ classdef FluidType
          obj.entropyHandle = entropyHandle;
          obj.pressureFromTempEntropyHandle = pressureFromTempEntropyHandle;
          obj.temperatureFromPressureEntropyHandle = temperatureFromPressureEntropyHandle;
+         obj.pressureFromTempEnthalpyHandle = pressureFromTempEnthalpyHandle;
+         obj.temperatureFromPressureEnthalpyHandle = temperatureFromPressureEnthalpyHandle;
        end
        
        function P = getVapourPressure(obj,T)
@@ -264,6 +268,14 @@ classdef FluidType
             catch
                 T = obj.temperatureFromPressureEntropyHandle(s);  
             end
+        end
+        
+        function P = getPressureFromTemperatureEnthalpy(obj,T,h)
+            P = obj.pressureFromTempEnthalpyHandle(T,h);
+        end
+        
+        function P = getTemperatureFromPressureEnthalpy(obj,P,h)
+            P = obj.temperatureFromPressureEnthalpyHandle(P,h);
         end
         
 %         %DO NOT USE. uses calcEntropyChange and NIST data as a

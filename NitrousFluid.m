@@ -536,11 +536,39 @@ classdef NitrousFluid
             val = NitrousFluid.oneColInterp(data,2,1,s);
         end
         
-        %Function to get the pressure (P) of the saturated liquid for a
+        %Function to get the pressure (Pa) of the saturated liquid for a
         %given specific entropy (J/K/Kg)
         function val = getSaturatedLiquidPressureFromEntropy(s)
             T = NitrousFluid.getSaturatedLiquidTemperatureFromEntropy(s);
             val = FluidType.NITROUS_LIQUID.getVapourPressure(T);
+        end
+        
+        %Function to get the pressure (Pa) of the gas for a given specific
+        %enthalpy (J/Kg) and temperature (K)
+        function val = getGasPressureForTemperatureEnthalpy(T,h)
+            data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'gasEnthalpyGenerated.txt'],3);
+            val = NitrousFluid.twoColInterp(data,1,3,2,T,h);
+        end
+        
+        %Function to get the temperature (K) of the gas for a given specific
+        %enthalpy (J/Kg) and pressure (Pa)
+        function val = getGasTemperatureForPressureEnthalpy(P,h)
+            data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'gasEnthalpyGenerated2.txt'],3);
+            val = NitrousFluid.twoColInterp(data,1,3,2,P,h);
+        end
+        
+        %Function to get the pressure (Pa) of the liquid for a given specific
+        %enthalpy (J/Kg) and temperature (K)
+        function val = getLiquidPressureForTemperatureEnthalpy(T,h)
+            data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'liquidEnthalpyGenerated.txt'],3);
+            val = NitrousFluid.twoColInterp(data,1,3,2,T,h);
+        end
+        
+        %Function to get the temperature (K) of the gas for a given specific
+        %enthalpy (J/Kg) and pressure (Pa)
+        function val = getLiquidTemperatureForPressureEnthalpy(P,h)
+            data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'liquidEnthalpyGenerated2.txt'],3);
+            val = NitrousFluid.twoColInterp(data,1,3,2,P,h);
         end
         
         %Function to get the specific heat capacity at constant volume for the
