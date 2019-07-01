@@ -283,8 +283,8 @@ classdef GeometricNitrousAndAirTank < matlab.mixin.Copyable%handle %Handle class
             if obj.mAir == 0
                E1 = 0; %Stops equalling NaN
             end
-            PLiq = obj.getPressureAtHeight(0.5*obj.liquidHeight);
-            E2 = obj.mLiquid * FluidType.NITROUS_LIQUID.getSpecificInternalEnergy(obj.temp,PLiq);
+            %PLiq = obj.getPressureAtHeight(0.5*obj.liquidHeight);
+            E2 = obj.mLiquid * FluidType.NITROUS_LIQUID.getSpecificInternalEnergy(obj.temp,obj.vapourPressure);
             E3 = obj.mVapour * FluidType.NITROUS_GAS.getSpecificInternalEnergy(obj.temp,obj.vapourPressure);
             E = E1 + E2 + E3;
         end
@@ -294,8 +294,8 @@ classdef GeometricNitrousAndAirTank < matlab.mixin.Copyable%handle %Handle class
             if obj.mAir == 0
                E1 = 0; %Stops equalling NaN
             end
-            PLiq = obj.getPressureAtHeight(0.5*obj.liquidHeight);
-            E2 = obj.mLiquid * FluidType.NITROUS_LIQUID.getSpecificEnthalpy(obj.temp,PLiq);
+            %PLiq = obj.getPressureAtHeight(0.5*obj.liquidHeight);
+            E2 = obj.mLiquid * FluidType.NITROUS_LIQUID.getSpecificEnthalpy(obj.temp,obj.vapourPressure);
             E3 = obj.mVapour * FluidType.NITROUS_GAS.getSpecificEnthalpy(obj.temp,obj.vapourPressure);
             E = E1 + E2 + E3;
         end
