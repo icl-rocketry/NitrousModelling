@@ -1,9 +1,10 @@
 %Enumeration to represent types of fluids
 classdef FluidType
    enumeration
-      AIR(@(T,P) 1005,@(T,P) 718, @(T,P) P/(287*T),287, @(T,P) sqrt(1.401*287*T), @(P) error('Unsupported'), @(T,P) 1005 * T, @(T,P) error('Unsupported'),@(T,P) error('Unsupported'),@(T,s) error('Unsupported'),@(P,s) error('Unsupported'),@(T,s) error('Unsupported'),@(P,s) error('Unsupported')), 
-      NITROUS_LIQUID(@NitrousFluid.getLiquidCp,@NitrousFluid.getLiquidCv,@NitrousFluid.getLiquidDensity,@NitrousFluid.getGasConstant,@NitrousFluid.getLiquidSpeedOfSound,@SaturatedNitrous.getVapourPressure,@NitrousFluid.getLiquidSpecificEnthalpy, @NitrousFluid.getLiquidIsobaricCoeffOfExpansion,@NitrousFluid.getSaturatedLiquidEntropy,@NitrousFluid.getSaturatedLiquidPressureFromEntropy,@NitrousFluid.getSaturatedLiquidTemperatureFromEntropy,@NitrousFluid.getLiquidPressureForTemperatureEnthalpy,@NitrousFluid.getLiquidTemperatureForPressureEnthalpy), 
-      NITROUS_GAS(@NitrousFluid.getGasCp,@NitrousFluid.getGasCv,@NitrousFluid.getGasDensity,@NitrousFluid.getGasConstant,@NitrousFluid.getGasSpeedOfSound,@SaturatedNitrous.getVapourPressure,@NitrousFluid.getGasSpecificEnthalpy, @NitrousFluid.getGasIsobaricCoeffOfExpansion,@NitrousFluid.getGasEntropy,@NitrousFluid.getGasPressureForTemperatureEntropy,@NitrousFluid.getGasTemperatureForPressureEntropy,@NitrousFluid.getGasPressureForTemperatureEnthalpy,@NitrousFluid.getGasTemperatureForPressureEnthalpy);
+      AIR(@(T,P) 1005,@(T,P) 718, @(T,P) P/(287*T),287, @(T,P) sqrt(1.401*287*T), @(P) error('Unsupported'), @(T,P) 1005 * T, @(T,P) error('Unsupported'),@(T,s) error('Unsupported'),@(P,s) error('Unsupported'),@(T,s) error('Unsupported'),@(P,s) error('Unsupported')), 
+        NITROUS_LIQUID(@NitrousFluid.getLiquidCp,@NitrousFluid.getLiquidCv,@NitrousFluid.getLiquidDensity,@NitrousFluid.getGasConstant,@NitrousFluid.getLiquidSpeedOfSound,@SaturatedNitrous.getVapourPressure,@NitrousFluid.getLiquidSpecificEnthalpy, @NitrousFluid.getLiquidEntropy,@NitrousFluid.getGasPressureForTemperatureEntropy,@NitrousFluid.getLiquidTemperatureForPressureEntropy,@NitrousFluid.getLiquidPressureForTemperatureEnthalpy,@NitrousFluid.getLiquidTemperatureForPressureEnthalpy), 
+        NITROUS_GAS(@NitrousFluid.getGasCp,@NitrousFluid.getGasCv,@NitrousFluid.getGasDensity,@NitrousFluid.getGasConstant,@NitrousFluid.getGasSpeedOfSound,@SaturatedNitrous.getVapourPressure,@NitrousFluid.getGasSpecificEnthalpy, @NitrousFluid.getGasEntropy,@NitrousFluid.getGasPressureForTemperatureEntropy,@NitrousFluid.getGasTemperatureForPressureEntropy,@NitrousFluid.getGasPressureForTemperatureEnthalpy,@NitrousFluid.getGasTemperatureForPressureEnthalpy),
+        NITROUS_GENERAL(@NitrousFluid.getCp,@NitrousFluid.getCv,@NitrousFluid.getDensity,@NitrousFluid.getGasConstant,@NitrousFluid.getSpeedOfSound,@SaturatedNitrous.getVapourPressure,@NitrousFluid.getSpecificEnthalpy,@NitrousFluid.getEntropy,@NitrousFluid.getPressureForTemperatureEntropy,@NitrousFluid.getTemperatureForPressureEntropy,@NitrousFluid.getPressureForTemperatureEnthalpy,@NitrousFluid.getTemperatureForPressureEnthalpy);
    end
    properties
       CpHandle;
@@ -18,10 +19,10 @@ classdef FluidType
       gasConstant;
       speedOfSoundHandle;
       vapourPressureHandle;
-      isobaricCoeffOfExpansionHandle;
+%       isobaricCoeffOfExpansionHandle;
    end
    methods
-       function obj = FluidType(CpHandle,CvHandle,densityHandle,gasConstant,speedOfSoundHandle,vapourPressureHandle,enthalpyHandle,isobaricCoeffOfExpansionHandle,entropyHandle,pressureFromTempEntropyHandle,temperatureFromPressureEntropyHandle,pressureFromTempEnthalpyHandle,temperatureFromPressureEnthalpyHandle)
+       function obj = FluidType(CpHandle,CvHandle,densityHandle,gasConstant,speedOfSoundHandle,vapourPressureHandle,enthalpyHandle,entropyHandle,pressureFromTempEntropyHandle,temperatureFromPressureEntropyHandle,pressureFromTempEnthalpyHandle,temperatureFromPressureEnthalpyHandle)
          obj.CpHandle = CpHandle;
          obj.CvHandle = CvHandle;
          obj.densityHandle = densityHandle;
@@ -29,7 +30,7 @@ classdef FluidType
          obj.speedOfSoundHandle = speedOfSoundHandle;
          obj.vapourPressureHandle = vapourPressureHandle;
          obj.enthalpyHandle = enthalpyHandle;
-         obj.isobaricCoeffOfExpansionHandle = isobaricCoeffOfExpansionHandle;
+         %obj.isobaricCoeffOfExpansionHandle = isobaricCoeffOfExpansionHandle;
          obj.entropyHandle = entropyHandle;
          obj.pressureFromTempEntropyHandle = pressureFromTempEntropyHandle;
          obj.temperatureFromPressureEntropyHandle = temperatureFromPressureEntropyHandle;
@@ -75,28 +76,28 @@ classdef FluidType
 %            h = obj.getCv(T,P) * T + P * v;
        end
        
-       %Function to predict enthalpy at a given temp and pressure of the
-       %fluid given a known enthalpy at a known temp and pressure. 
-       %Uses dh = CpdT + [v(1-aT)]dP
-       function val = predictEnthalpy(obj,knownH,knownT,knownP,T,P)
-            dP = P-knownP; %Difference in pressure
-            stepSize = 10000; %Step size to use for numerical integration
-            steps = ceil(abs(dP / stepSize)); %Number of discrete steps for integration
-            
-            integrand = @(Pi) (1/obj.getDensity(knownT,Pi))*(1-(obj.isobaricCoeffOfExpansionHandle(T,Pi))*T);
-            dh1 = legendreIntegral(integrand,max(10,steps),SaturatedNitrous.getVapourPressure(T),P);
-            
-            %Numerically integrate CpdT at constant P
-            dT = T-knownT;
-            stepSize = 10000;
-            steps = ceil(abs(dT / stepSize));
-            
-            integrand2 = @(Ti) obj.getCp(Ti,knownP);
-            dh2 = legendreIntegral(integrand2,max(10,steps),knownT,T);
-            %fprintf(['dh: ',num2str(dh),'\n']);
-            
-            val = knownH + dh1 + dh2; 
-       end
+%        %Function to predict enthalpy at a given temp and pressure of the
+%        %fluid given a known enthalpy at a known temp and pressure. 
+%        %Uses dh = CpdT + [v(1-aT)]dP
+%        function val = predictEnthalpy(obj,knownH,knownT,knownP,T,P)
+%             dP = P-knownP; %Difference in pressure
+%             stepSize = 10000; %Step size to use for numerical integration
+%             steps = ceil(abs(dP / stepSize)); %Number of discrete steps for integration
+%             
+%             integrand = @(Pi) (1/obj.getDensity(knownT,Pi))*(1-(obj.isobaricCoeffOfExpansionHandle(T,Pi))*T);
+%             dh1 = legendreIntegral(integrand,max(10,steps),SaturatedNitrous.getVapourPressure(T),P);
+%             
+%             %Numerically integrate CpdT at constant P
+%             dT = T-knownT;
+%             stepSize = 10000;
+%             steps = ceil(abs(dT / stepSize));
+%             
+%             integrand2 = @(Ti) obj.getCp(Ti,knownP);
+%             dh2 = legendreIntegral(integrand2,max(10,steps),knownT,T);
+%             %fprintf(['dh: ',num2str(dh),'\n']);
+%             
+%             val = knownH + dh1 + dh2; 
+%        end
        
        %Get the Cv of the gas using method supplied by gas
        function Cv = getCv(obj,T,P)
@@ -247,27 +248,19 @@ classdef FluidType
         end
         
         function s = getEntropy(obj,T,P)
-            try 
-                s = obj.entropyHandle(T,P);
-            catch
-                s = obj.entropyHandle(T);
-            end
+            s = obj.entropyHandle(T,P);
         end
         
         function P = getPressureFromTemperatureEntropy(obj,T,s)
-            try 
-                P = obj.pressureFromTempEntropyHandle(T,s); 
-            catch
-                P = obj.pressureFromTempEntropyHandle(s); 
-            end
+            P = obj.pressureFromTempEntropyHandle(T,s); 
         end
         
         function T = getTemperatureFromPressureEntropy(obj,P,s)
-            try 
-                T = obj.temperatureFromPressureEntropyHandle(P,s); 
-            catch
-                T = obj.temperatureFromPressureEntropyHandle(s);  
-            end
+            T = obj.temperatureFromPressureEntropyHandle(P,s); 
+        end
+        
+        function h = getEnthalpy(obj,T,P)
+            h = obj.enthalpyHandle(T,P);
         end
         
         function P = getPressureFromTemperatureEnthalpy(obj,T,h)
@@ -295,12 +288,18 @@ classdef FluidType
         function val = getRealIsentropicTempPressureExponent(obj,T,P)
             R = obj.getGasConstant();
             Cp = obj.getCp(T,P);
-            smallIncrem = 1*10^-7;
+            smallIncrem = 1*10^-2;
             Z1 = obj.getCompressibilityFactor(T-smallIncrem,P);
             Z = obj.getCompressibilityFactor(T,P);
             Z2 = obj.getCompressibilityFactor(T+smallIncrem,P);
             dZdT = (Z2-Z1) ./ (2*smallIncrem); %Partial derivative of dZ/dT with P constant
+%             disp("dZdT: "+dZdT);
+%             disp("R/Cp: "+(R/Cp));
+%             disp("T"+T);
+%             disp("Z: "+Z);
+%             disp("Z + TdZdT: "+(Z + T.*dZdT));
             val = (1-(R./Cp).*(Z + T.*dZdT)  ).^-1;
+%             disp("v: "+val);
         end
         
         %See 'real gas thermodynamics' paper for derivation

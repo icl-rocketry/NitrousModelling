@@ -41,7 +41,11 @@ fprintf(fileID,['Pressure {Pa} \t Temperature {K} \t Specific Entropy {J/Kg}\r\n
 parfor k=1:length(data)
     T = dataCopy(k,2);
     P = dataCopy(k,1);
-    h = FluidType.NITROUS_GAS.getEntropy(T,P);
+    try
+        h = FluidType.NITROUS_GAS.getEntropy(T,P);
+    catch
+        h = -1;
+    end
     data(k,3) = h;
     lines(k) = {sprintf('%d \t %d \t %d',P,T,h)};
 end

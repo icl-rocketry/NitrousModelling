@@ -40,40 +40,36 @@ classdef RealFlow
             GPv = fluidType.getRealIsentropicPressureVolumeExponent(To,Po);
             PinitGuess = Po / (1 + 0.5*(GPv-1)*MTarget^2)^( (GPv / (GPv - 1)) ); %Should be a pretty good guess of pressure for choked flow
             
-            pDelta = PinitGuess-Po;
-            if ~exist('incremSize','var')
-               incremSize = min(100000,abs(pDelta / 10)); %Min of 10 steps, default step size of 100kPa
-               if pDelta < 0 %If need to be decreasing pressure
-                   incremSize = -incremSize; %Should increment by negative amount
-               end
-            end
+%             pDelta = PinitGuess-Po;
+%             if ~exist('incremSize','var')
+%                incremSize = min(100000,abs(pDelta / 10)); %Min of 10 steps, default step size of 100kPa
+%                if pDelta < 0 %If need to be decreasing pressure
+%                    incremSize = -incremSize; %Should increment by negative amount
+%                end
+%             end
             
-            PCurrent = Po;
-            TCurrent = To;
-            MCurrent = 0;
-            
-            %Decrement PCurrent until get to faster than required mach
-            %number
-            while MCurrent < MTarget
-                PGuess = PCurrent + incremSize; %Move P closer to where we want to calculate for
-                
-                [TCalc,vCalc] = RealFlow.getIsentropicTempVelocitySmallIncrem(PCurrent,TCurrent,To,CpStagnation,PGuess,fluidType);
-                a = NitrousFluid.getGasSpeedOfSound(TCalc,PGuess);
-                M = vCalc / a;
-                %disp("v: "+vCalc+", T: "+TCalc+" (P="+PGuess+")");
-                
-                %Update known point that calculations are done relative to
-                PCurrent = PGuess;
-                TCurrent = TCalc;
-                MCurrent = M;
-            end 
-            
+%             PCurrent = Po;
+%             TCurrent = To;
+%             MCurrent = 0;
+%             
+%             %Decrement PCurrent until get to faster than required mach
+%             %number
+%             while MCurrent < MTarget
+%                 PGuess = PCurrent + incremSize; %Move P closer to where we want to calculate for
+%                 [TCalc,vCalc,M] = RealFlow.getIsentropicTempVelocity(PCurrent,TCurrent,To,CpStagnation,PGuess,fluidType);
+%                 
+%                 %Update known point that calculations are done relative to
+%                 PCurrent = PGuess;
+%                 TCurrent = TCalc;
+%                 MCurrent = M;
+%             end 
+            PCurrent = PinitGuess;
+
             %Our P is currently lower than the correct one, solve for
             %POSITIVE pressure increase that gives correct mach number
             PReq = PCurrent + abs(real(fzero(@errInGuess,0)));
-            [TCalc,vCalc] = RealFlow.getIsentropicTempVelocitySmallIncrem(PCurrent,TCurrent,To,CpStagnation,PReq,fluidType);
-            a = NitrousFluid.getGasSpeedOfSound(TCalc,PReq);
-            MActual = vCalc / a;
+            
+            [TCalc,vCalc,MActual] = RealFlow.getIsentropicTempVelocity(Po,To,To,CpStagnation,PReq,fluidType);
             %disp("P FOR M ACTUAL: "+PReq);
             
             %Function to calculate the err in mach number for a
@@ -81,88 +77,96 @@ classdef RealFlow
             function err = errInGuess(PGuessingOffset)
                 PGuessingOffset = abs(real(PGuessingOffset)); %Positive real only
                 PGuessing = PCurrent + PGuessingOffset;
-                [TCalc,vCalc] = RealFlow.getIsentropicTempVelocitySmallIncrem(PCurrent,TCurrent,To,CpStagnation,PGuessing,fluidType);
-                a = NitrousFluid.getGasSpeedOfSound(TCalc,PGuessing);
-                M = vCalc / a;
+                [TCalc,vCalc,M] = RealFlow.getIsentropicTempVelocity(Po,To,To,CpStagnation,PGuessing,fluidType);
                 err = M - MTarget;
             end
         end
+%         
+%         %Function to get the temperature of a flow from a known pressure
+%         %and temperature that is now at a new known pressure. Should be a
+%         %fairly small difference since this assumes the isentropic exponent
+%         %is locally constant - which is a good assumption as long as the
+%         %pressure gradient you ask about isn't huge.
+%         function [TCalc] = getIsentropicTempSmallIncrem(knownPressure,knownTemperature,P,fluidType)
+%             PRatio = P / knownPressure;
+%             %Isentropic exponent needs a temp and pressure to calculate,
+%             %but changes very little with temp and pressure
+%             isentropicExponent = fluidType.getRealIsentropicTempPressureExponent(knownTemperature,knownPressure);
+%             TCalc = knownTemperature * PRatio^((isentropicExponent-1) / isentropicExponent);
+%         end
         
-        %Function to get the temperature of a flow from a known pressure
-        %and temperature that is now at a new known pressure. Should be a
-        %fairly small difference since this assumes the isentropic exponent
-        %is locally constant - which is a good assumption as long as the
-        %pressure gradient you ask about isn't huge.
-        function [TCalc] = getIsentropicTempSmallIncrem(knownPressure,knownTemperature,P,fluidType)
-            PRatio = P / knownPressure;
-            %Isentropic exponent needs a temp and pressure to calculate,
-            %but changes very little with temp and pressure
-            isentropicExponent = fluidType.getRealIsentropicTempPressureExponent(knownTemperature,knownPressure);
-            TCalc = knownTemperature * PRatio^((isentropicExponent-1) / isentropicExponent);
-        end
+%         %Function to get the temperature and velocity of a flow from a known pressure
+%         %and temperature that is now at a new known pressure. Should be a
+%         %fairly small difference since this assumes the isentropic exponent
+%         %is locally constant - which is a good assumption as long as the
+%         %pressure gradient you ask about isn't huge.
+%         function [TCalc,vCalc] = getIsentropicTempVelocitySmallIncrem(knownPressure,knownTemperature,To,CpStagnation,P,fluidType)
+%             TCalc = RealFlow.getIsentropicTempSmallIncrem(knownPressure,knownTemperature,P,fluidType);
+%             vCalc = RealFlow.getIsentropicVelocity(To,TCalc,P,fluidType);
+%         end
         
-        %Function to get the temperature and velocity of a flow from a known pressure
-        %and temperature that is now at a new known pressure. Should be a
-        %fairly small difference since this assumes the isentropic exponent
-        %is locally constant - which is a good assumption as long as the
-        %pressure gradient you ask about isn't huge.
-        function [TCalc,vCalc] = getIsentropicTempVelocitySmallIncrem(knownPressure,knownTemperature,To,CpStagnation,P,fluidType)
-            TCalc = RealFlow.getIsentropicTempSmallIncrem(knownPressure,knownTemperature,P,fluidType);
-            vCalc = RealFlow.getIsentropicVelocity(To,TCalc,P,fluidType);
-        end
-        
-        %Function to get the velocity and mach number of the isentropic flow for a
-        %given temperature relative to a given total temperature
-        function [vCalc,M] = getIsentropicVelocity(To,T,P,fluidType)
+%         %Function to get the velocity and mach number of the isentropic flow for a
+%         %given temperature relative to a given total temperature
+%         function [vCalc,M] = getIsentropicVelocity(To,T,P,fluidType)
+%             a = fluidType.getSpeedOfSound(T,P);
+%             %Enthalpy, as implemented now, is only a function of
+%             %temperature so give invalid value for pressure.
+%             h0 = fluidType.getEnthalpy(To,-1);
+%             h = fluidType.getEnthalpy(T,-1);
+%             vCalc = sqrt(2*(h0-h));
+%             M = vCalc / a;
+%             
+% %             GPv = fluidType.getRealIsentropicPressureVolumeExponent(T,P);
+% %             GTv = fluidType.getRealIsentropicTempVolumeExponent(T,P);
+% %             
+% %             %From paper on real gas thermodynamics
+% %             M = sqrt ( (2/(GPv -1)) * ( (To / T)^( (GPv -1 )/(GTv - 1) ) - 1 ) );
+% % 
+% %             vCalc = real(M*a);
+%         end
+        %Function to get the velocity and mach number of the adiabatic flow for a
+        %given state relative to upstream
+        function [vCalc,M] = getAdiabaticVelocity(TUpstream,PUpstream,vUpstream,T,P,fluidType)
             a = fluidType.getSpeedOfSound(T,P);
-            GPv = fluidType.getRealIsentropicPressureVolumeExponent(T,P);
-            GTv = fluidType.getRealIsentropicTempVolumeExponent(T,P);
-            
-            %From paper on real gas thermodynamics
-            M = sqrt ( (2/(GPv -1)) * ( (To / T)^( (GPv -1 )/(GTv - 1) ) - 1 ) );
-
-            vCalc = real(M*a);
+            h0 = fluidType.getEnthalpy(TUpstream,PUpstream) + 0.5*vUpstream.^2;
+            h = fluidType.getEnthalpy(T,P);
+            vCalc = sqrt(2*(h0-h));
+            M = vCalc / a;
         end
         
         %Function to get the temperature (K) and velocity (m/s) and Mach number at a point in the
         %flow for a given pressure (Pascal), using given point that has known temperature (K), pressure (Pa)
-        %and the SAME total temperature To (K). incremSize is a small
-        %pressure (Pascal) relative to your problem. This function works by stepping from the known pressure condition to your given condition by this amount. If it left blank a default will be used 
-        function [TCalc,vCalc,M] = getIsentropicTempVelocity(knownPressure,knownTemperature,To,CpStagnation,P,fluidType,incremSize)
-            if To < knownTemperature
-               error('T known > To known??'); 
+        %WILL ONLY work for a single phase flow. Be careful because a
+        %vapour near the saturation line may need modelling via a biphasic
+        %model (See SaturatedNitrous)
+        function [TCalc,vCalc,M] = getIsentropicTempVelocity(knownPressure,knownTemperature,knownVelocity,P,fluidType,adiabaticEff)
+            if ~exist('adiabaticEff','var')
+                adiabaticEff = 1;
             end
-            pDelta = P-knownPressure;
-            if ~exist('incremSize','var')
-               incremSize = min(100000,abs(pDelta / 10)); %Min of 10 steps, default step size of 100kPa
-               if pDelta < 0 %If need to be decreasing pressure
-                   incremSize = -incremSize; %Should increment by negative amount
-               end
-            end
+            %Uses real-gas-thermodynamics instead of coolprop directly to
+            %find isentropic temperature downstream. This is because it
+            %agrees nicely with coolprop for values away from saturation
+            %line, but as approach saturation line the cool prop values
+            %become a little questionable
             
-            PCurrent = knownPressure;
-            TCurrent = knownTemperature;
-            
-            while true
-                PGuess = PCurrent + incremSize; %Move P closer to where we want to calculate for
-                if abs(PGuess - P) <= abs(incremSize) %If this step brought us to or past our pressure we want
-                    PGuess = P;
-                end
-                
-                [TCalc,vCalc] = RealFlow.getIsentropicTempVelocitySmallIncrem(PCurrent,TCurrent,To,CpStagnation,PGuess,fluidType);
-                %disp("v: "+vCalc+", T: "+TCalc+" (P="+PGuess+")");
-                
-                if PGuess == P
-                    a = NitrousFluid.getGasSpeedOfSound(TCalc,P);
-                    M = vCalc / a;
-                    drawnow;
-                   return; %Values calculated for the correct pressure 
-                end
-                
-                %Update known point that calculations are done relative to
-                PCurrent = PGuess;
-                TCurrent = TCalc;
-            end 
+            %PRatio = P / knownPressure;
+            %Isentropic exponent needs a temp and pressure to calculate,
+            %but changes very little with temp and pressure
+            %isentropicExponent = fluidType.getRealIsentropicTempPressureExponent(knownTemperature,knownPressure);
+            %disp("PR: "+PRatio+" isentropic exponent: "+isentropicExponent);
+            %TDownstreamIsentropic = knownTemperature * PRatio^((isentropicExponent-1) / isentropicExponent);
+            entropyUpstream = fluidType.getEntropy(knownTemperature,knownPressure);
+            TDownstreamIsentropic = fluidType.getTemperatureFromPressureEntropy(P,entropyUpstream);
+            %disp("RGT: "+TCalc+", CoolProp: "+TDownstreamIsentropic);
+            hIsen = fluidType.getEnthalpy(TDownstreamIsentropic,P);
+            hUpstream = fluidType.getEnthalpy(knownTemperature,knownPressure);
+            dhIsentropic = hIsen - hUpstream;
+            dh = dhIsentropic * adiabaticEff;
+            hTrue = hUpstream+dh;
+            TDownstream = fluidType.getTemperatureFromPressureEnthalpy(P,hTrue);
+            %disp("PVap downstream: "+fluidType.getVapourPressure(TDownstream));
+            TCalc = TDownstream;
+            [vCalc,M] = RealFlow.getAdiabaticVelocity(knownTemperature,knownPressure,knownVelocity,TCalc,P,fluidType);
         end
         
         %Function to get the velocity and temperature of flow downstream of

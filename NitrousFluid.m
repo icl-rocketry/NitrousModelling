@@ -369,110 +369,131 @@ classdef NitrousFluid
            val = 8.314472 / NitrousFluid.getMolarMass(); %Universal gas constant divide by molar mass
         end
         
+        %Function to get the speed of sound of the nitrous oxide in m/s for
+        %a given temperature (K) and pressure (P), automatically assuming
+        %the correct state
+        function c = getSpeedOfSound(T,P)
+           c = NitrousFluidCoolProp.getProperty(FluidProperty.SPEED_OF_SOUND,FluidProperty.TEMPERATURE,T,FluidProperty.PRESSURE,P);
+        end
+        
         %Function to get the speed of sound of the nitrous oxide gas in m/s
         %for a given temperature (K) and pressure (P)
         function c = getGasSpeedOfSound(T,P)
            %Use c^2 = 1 / (rho * isentropic compressibility);
-           betaS = NitrousFluid.getGasAdiabaticCompressibility(T,P);
-           rho = NitrousFluid.getGasDensity(T,P);
-           c = sqrt(1 / (rho * betaS));
+           c = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.GAS,FluidProperty.SPEED_OF_SOUND,FluidProperty.TEMPERATURE,T,FluidProperty.PRESSURE,P);
+%            betaS = NitrousFluid.getGasAdiabaticCompressibility(T,P);
+%            rho = NitrousFluid.getGasDensity(T,P);
+%            c = sqrt(1 / (rho * betaS));
         end
         
         %Function to get the speed of sound of the nitrous oxide liquid in m/s
         %for a given temperature (K) and pressure (P)
         function c = getLiquidSpeedOfSound(T,P)
+            c = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.LIQUID,FluidProperty.SPEED_OF_SOUND,FluidProperty.TEMPERATURE,T,FluidProperty.PRESSURE,P);
            %Use c^2 = 1 / (rho * isentropic compressibility);
-           betaS = NitrousFluid.getLiquidAdiabaticCompressibility(T,P);
-           rho = NitrousFluid.getLiquidDensity(T,P);
-           c = sqrt(1 / (rho * betaS));
+%            betaS = NitrousFluid.getLiquidAdiabaticCompressibility(T,P);
+%            rho = NitrousFluid.getLiquidDensity(T,P);
+%            c = sqrt(1 / (rho * betaS));
+        end
+        
+        function val = getDensity(T,P)
+           val = NitrousFluidCoolProp.getProperty(FluidProperty.DENSITY,FluidProperty.TEMPERATURE,T,FluidProperty.PRESSURE,P); 
         end
         
         %Function to get the density of the non-saturated liquid (Kg/m^3)
         %at a given Temp (K) and Pressure (Pa)
         function val = getLiquidDensity(T,P)
-            P1 = P/1000; %Need gas in kPa using tabulated data
-            data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'liquidDensityNISTOnly.txt']); 
-            val = NitrousFluid.twoColInterp(data,1,2,3,T,P1);
+            val = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.LIQUID,FluidProperty.DENSITY,FluidProperty.TEMPERATURE,T,FluidProperty.PRESSURE,P);
+%             P1 = P/1000; %Need gas in kPa using tabulated data
+%             data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'liquidDensityNISTOnly.txt']); 
+%             val = NitrousFluid.twoColInterp(data,1,2,3,T,P1);
         end
         
         %Function to get the density of the non-saturated gas (Kg/m^3)
         %at a given Temp (K) and Pressure (Pa)
         function val = getGasDensity(T,P)
-            P1 = P/1000; %Need gas in kPa using tabulated data
-            data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'gasDensityNISTOnly.txt']); 
-            val = NitrousFluid.twoColInterp(data,1,2,3,T,P1);
+            val = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.GAS,FluidProperty.DENSITY,FluidProperty.TEMPERATURE,T,FluidProperty.PRESSURE,P);
+%             P1 = P/1000; %Need gas in kPa using tabulated data
+%             data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'gasDensityNISTOnly.txt']); 
+%             val = NitrousFluid.twoColInterp(data,1,2,3,T,P1);
         end
         
-        %Function to get the specific enthalpy of the gas in J/Kg
+        function val = getSpecificEnthalpy(T,P)
+            val = NitrousFluidCoolProp.getProperty(FluidProperty.SPECIFIC_ENTHALPY,FluidProperty.TEMPERATURE,T,FluidProperty.PRESSURE,P);
+        end
+        
         function val = getGasSpecificEnthalpy(T,P)
-            %Enthalpy of gas saturated
-            valSat = SaturatedNitrous.getAbsoluteVapourSpecificEnthalpy(T);
-            %Pressure of the saturated gas
-            P1 = SaturatedNitrous.getVapourPressure(T);
-            dP = P-P1; %Difference in pressure
-            stepSize = 10000; %Step size to use for numerical integration
-            steps = ceil(abs(dP / stepSize)); %Number of discrete steps for integration
-            
-            integrand = @(Pi) (1/NitrousFluid.getGasDensity(T,Pi))*(1-(NitrousFluid.getGasIsobaricCoeffOfExpansion(T,Pi))*T);
-            dh = legendreIntegral(integrand,max(10,steps),P1,P);
-            
-            val = valSat + dh;
+            val = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.GAS,FluidProperty.SPECIFIC_ENTHALPY,FluidProperty.TEMPERATURE,T,FluidProperty.PRESSURE,P);
+%             data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'gasEnthalpy.txt'],3); 
+%             val = (NitrousFluid.oneColInterp(data,1,2,T) * 1000) / NitrousFluid.getMolarMass();
         end
         
+        function val = getLiquidSpecificSaturationEnthalpy(T)
+            PVap = SaturatedNitrous.getVapourPressure(T);
+            val = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.LIQUID,FluidProperty.SPECIFIC_ENTHALPY,FluidProperty.TEMPERATURE,T,FluidProperty.PRESSURE,PVap);
+%             data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'liquidSaturationEnthalpy.txt'],3); 
+%             val = (NitrousFluid.oneColInterp(data,1,2,T) * 1000) / NitrousFluid.getMolarMass();
+        end
+        
+        function val = getEnthalpyOfVaporization(T)
+            PVap = SaturatedNitrous.getVapourPressure(T);
+            val = NitrousFluid.getGasSpecificEnthalpy(T,PVap) - NitrousFluid.getLiquidSpecificSaturationEnthalpy(T);
+%             data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'enthalpyOfVaporization.txt'],3); 
+%             val = (NitrousFluid.oneColInterp(data,1,2,T) * 1000) / NitrousFluid.getMolarMass();
+        end
+        
+        function val = getGasSpecificSaturationEnthalpy(T)
+            PVap = SaturatedNitrous.getVapourPressure(T);
+            val = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.GAS,FluidProperty.SPECIFIC_ENTHALPY,FluidProperty.TEMPERATURE,T,FluidProperty.PRESSURE,PVap);
+        end
+        
+%         %Function to get the specific enthalpy of the gas in J/Kg
+%         function val = getGasSpecificEnthalpyOtherWay(T,P)
+%             %Enthalpy of gas saturated
+%             %valSat = SaturatedNitrous.getAbsoluteVapourSpecificEnthalpy(T);
+%             valSat = NitrousFluid.getGasSpecificSaturationEnthalpy(T);
+%             val = valSat;
+% %             %Pressure of the saturated gas
+% %             P1 = SaturatedNitrous.getVapourPressure(T);
+% %             dP = P-P1; %Difference in pressure
+% %             stepSize = 10000; %Step size to use for numerical integration
+% %             steps = ceil(abs(dP / stepSize)); %Number of discrete steps for integration
+% %             
+% %             integrand = @(Pi) (1/NitrousFluid.getGasDensity(T,Pi))*(1-(NitrousFluid.getGasIsobaricCoeffOfExpansion(T,Pi))*T);
+% %             dh = legendreIntegral(integrand,max(10,steps),P1,P);
+% %             val = valSat + dh;
+%         end
+
         %Function to get the specific enthalpy of the liquid in J/Kg
         function val = getLiquidSpecificEnthalpy(T,P)
+            val = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.LIQUID,FluidProperty.SPECIFIC_ENTHALPY,FluidProperty.TEMPERATURE,T,FluidProperty.PRESSURE,P);
             %Enthalpy of gas saturated
-            valSat = SaturatedNitrous.getAbsoluteLiquidSpecificEnthalpy(T);
-            %Pressure of the saturated gas
-            P1 = SaturatedNitrous.getVapourPressure(T);
-            dP = P-P1; %Difference in pressure
-            stepSize = 10000; %Step size to use for numerical integration
-            steps = ceil(abs(dP / stepSize)); %Number of discrete steps for integration
-            
-            integrand = @(Pi) (1/NitrousFluid.getLiquidDensity(T,Pi))*(1-(NitrousFluid.getLiquidIsobaricCoeffOfExpansion(T,Pi))*T);
-            dh = legendreIntegral(integrand,max(10,steps),P1,P);
-            
-            val = valSat + dh;
+%             val = NitrousFluid.getGasSpecificEnthalpy(T) - NitrousFluid.getEnthalpyOfVaporization(T);
+%             valSat = NitrousFluid.getLiquidSpecificSaturationEnthalpy(T);
+%             val = valSat;
+%             %Pressure of the saturated gas
+%             P1 = SaturatedNitrous.getVapourPressure(T);
+%             dP = P-P1; %Difference in pressure
+%             stepSize = 10000; %Step size to use for numerical integration
+%             steps = ceil(abs(dP / stepSize)); %Number of discrete steps for integration
+%             
+%             integrand = @(Pi) (1/NitrousFluid.getLiquidDensity(T,Pi))*(1-(NitrousFluid.getLiquidIsobaricCoeffOfExpansion(T,Pi))*T);
+%             dh = legendreIntegral(integrand,max(10,steps),P1,P);
+%             
+%             val = valSat + dh;
         end
         
-        %Function to get the specific enthalpy of the gas on the saturation line in J/Kg
-        function val = getGasSpecificSaturationEnthalpy(T,P)
-%             data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'gasEnthalpy.txt'],3); 
-%             val = NitrousFluid.oneColLinearInterp(data,1,2,T);
-%             molarMass = NitrousFluid.getMolarMass();
-%             val = val * 1000 * (1/molarMass); %To convert to J/Kg
-
-            %ONLY VALID on saturation line, TODO extend using isobaric
-            %coefficient of expansion to beyond saturation line
-            PSat = SaturatedNitrous.getVapourPressure(T);
-            if abs (P - PSat) > 1000
-               warning(['Gas enthalpy data only available on saturation line (And no extrapolation has been implemented)! Given pressure (',num2str(P),') is not on saturation line (',num2str(PSat),') so enthalpy will be completely invalid!']); 
-            end
-            val = SaturatedNitrous.getAbsoluteVapourSpecificEnthalpy(T);
-        end
-        
-        %Function to get the specific enthalpy of the gas in J/Kg
-        function val = getLiquidSpecificSaturationEnthalpy(T,P)
-            if T > SaturatedNitrous.T_CRIT %TODO Combine with SaturatedNitrous data to get up to higher temps
-                warning('Liquid saturated enthalpy data only valid up to 300K!');
-            end
-            PSat = SaturatedNitrous.getVapourPressure(T);
-            if abs (P - PSat) > 1000
-               warning(['Liquid enthalpy data only available on saturation line (And no extrapolation has been implemented)! Given pressure (',num2str(P),') is not on saturation line (',num2str(PSat),') so enthalpy will be completely invalid!']); 
-            end
-            val = SaturatedNitrous.getAbsoluteLiquidSpecificEnthalpy(T);
-%             data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'liquidSaturationEnthalpy.txt'],3); 
-%             val = NitrousFluid.oneColLinearInterp(data,1,2,T);
-%             molarMass = NitrousFluid.getMolarMass();
-%             val = val * 1000 * (1/molarMass); %To convert to J/Kg
+        function Z = getCompressibilityFactor(T,P)
+           Z = NitrousFluidCoolProp.getProperty(FluidProperty.COMPRESSIBILITY_FACTOR,FluidProperty.TEMPERATURE,T,FluidProperty.PRESSURE,P); 
         end
         
         %Function to get the compressibility factor, Z, of the gas at a
         %given temperature and pressure. Is calculated by looking up known
         %density for this T and P and using Z=P/(rho)RT
         function Z = getGasCompressibilityFactor(T,P)
-            rho = NitrousFluid.getGasDensity(T,P);
-            Z = P / (rho * NitrousFluid.getGasConstant() * T);
+            Z = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.GAS,FluidProperty.COMPRESSIBILIY_FACTOR,FluidProperty.TEMPERATURE,T,FluidProperty.PRESSURE,P);
+%             rho = NitrousFluid.getGasDensity(T,P);
+%             Z = P / (rho * NitrousFluid.getGasConstant() * T);
         end
         
         %Function to get the compressibility factor, Z, of the liquid at a
@@ -482,19 +503,26 @@ classdef NitrousFluid
         %really matter as this Z value is picked from real data to make it
         %match
         function Z = getLiquidCompressibilityFactor(T,P)
-            rho = NitrousFluid.getLiquidDensity(T,P);
-            Z = P / (rho * NitrousFluid.getGasConstant() * T);
+            Z = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.LIQUID,FluidProperty.COMPRESSIBILITY_FACTOR,FluidProperty.TEMPERATURE,T,FluidProperty.PRESSURE,P);
+%             rho = NitrousFluid.getLiquidDensity(T,P);
+%             Z = P / (rho * NitrousFluid.getGasConstant() * T);
+        end
+        
+        function val = getCp(T,P)
+            val = NitrousFluidCoolProp.getProperty(FluidProperty.CP,FluidProperty.TEMPERATURE,T,FluidProperty.PRESSURE,P);;
         end
         
         %Function to get the specific heat capacity at constant pressure for the
         %liquid (In J/K/Kg)
         %at a given Temp (K) and Pressure (Pa)
         function val = getLiquidCp(T,P)
-            P1 = P/1000; %Need gas in kPa using tabulated data
-            data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'liquidCp.txt']); 
-            val = NitrousFluid.twoColInterp(data,1,2,3,T,P1);
-            %Val is in J/K/mol, convert to J/K/Kg
-            val = val / NitrousFluid.getMolarMass();
+            val = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.LIQUID,FluidProperty.CP,FluidProperty.TEMPERATURE,T,FluidProperty.PRESSURE,P);
+            
+%             P1 = P/1000; %Need gas in kPa using tabulated data
+%             data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'liquidCp.txt']); 
+%             val = NitrousFluid.twoColInterp(data,1,2,3,T,P1);
+%             %Val is in J/K/mol, convert to J/K/Kg
+%             val = val / NitrousFluid.getMolarMass();
         end
         
         %Function to get the isobaric coefficient of expansion (1/K)
@@ -513,99 +541,156 @@ classdef NitrousFluid
             val = NitrousFluid.twoColInterp(data,1,2,3,T,P1);
         end
         
+        function val = getTemperatureForPressureEntropy(P,s)
+            val = NitrousFluidCoolProp.getProperty(FluidProperty.TEMPERATURE,FluidProperty.PRESSURE,P,FluidProperty.SPECIFIC_ENTROPY,s);
+        end
+        
         %Function to get the temperature (K) of the gas for a given
         %pressure (Pa) and specific entropy (J/K/Kg)
         function val = getGasTemperatureForPressureEntropy(P,s)
-            data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'entropyGas2.txt'],3); 
-            val = NitrousFluid.twoColInterp(data,1,3,2,P,s);
+            val = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.GAS,FluidProperty.TEMPERATURE,FluidProperty.PRESSURE,P,FluidProperty.SPECIFIC_ENTROPY,s);
+%             data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'entropyGas2.txt'],3); 
+%             val = NitrousFluid.twoColInterp(data,1,3,2,P,s); %Find the answer by using a reverse table
+%             val = fzero(@errInVal,val); %Make the value consistent with other data by doing a quick fzero around the inverted value
+%             
+%             function err = errInVal(T)
+%                 s2 = FluidType.NITROUS_GAS.getEntropy(T,P);
+%                 err = s2-s;
+%             end
+        end
+        
+        %Function to get the temperature (K) of the liquid for a given
+        %pressure (Pa) and specific entropy (J/K/Kg)
+        function val = getLiquidTemperatureForPressureEntropy(P,s)
+            val = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.LIQUID,FluidProperty.TEMPERATURE,FluidProperty.PRESSURE,P,FluidProperty.SPECIFIC_ENTROPY,s);
+%             data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'entropyGas2.txt'],3); 
+%             val = NitrousFluid.twoColInterp(data,1,3,2,P,s); %Find the answer by using a reverse table
+%             val = fzero(@errInVal,val); %Make the value consistent with other data by doing a quick fzero around the inverted value
+%             
+%             function err = errInVal(T)
+%                 s2 = FluidType.NITROUS_GAS.getEntropy(T,P);
+%                 err = s2-s;
+%             end
+        end
+        
+        function val = getPressureForTemperatureEntropy(T,s)
+           val = NitrousFluidCoolProp.getProperty(FluidProperty.PRESSURE,FluidProperty.TEMPERATURE,T,FluidProperty.SPECIFIC_ENTROPY,s);; 
         end
         
         %Function to get the pressure (Pa) of the gas for a given
         %temperature (T) and specific entropy (J/K/Kg)
         function val = getGasPressureForTemperatureEntropy(T,s)
-            s = s*NitrousFluid.getMolarMass(); %Convert to J/K/mol
-            data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'entropyGas.txt'],4);
-            val = NitrousFluid.twoColInterp(data,1,3,2,T,s) * 1000;
+            val = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.GAS,FluidProperty.PRESSURE,FluidProperty.TEMPERATURE,T,FluidProperty.SPECIFIC_ENTROPY,s);
+%             s = s*NitrousFluid.getMolarMass(); %Convert to J/K/mol
+%             data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'entropyGas.txt'],4);
+%             val = NitrousFluid.twoColInterp(data,1,3,2,T,s) * 1000;
         end
         
-        %Function to get the temperature (T) of the saturated liquid for a
-        %given specific entropy (J/K/Kg)
-        function val = getSaturatedLiquidTemperatureFromEntropy(s)
-            s = s*NitrousFluid.getMolarMass(); %Convert to J/K/mol
-            data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'entropySaturation.txt'],3);
-            val = NitrousFluid.oneColInterp(data,2,1,s);
+        %Function to get the pressure (Pa) of the liquid for a given
+        %temperature (T) and specific entropy (J/K/Kg)
+        function val = getLiquidPressureForTemperatureEntropy(T,s)
+            val = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.LIQUID,FluidProperty.PRESSURE,FluidProperty.TEMPERATURE,T,FluidProperty.SPECIFIC_ENTROPY,s);
+%             s = s*NitrousFluid.getMolarMass(); %Convert to J/K/mol
+%             data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'entropyGas.txt'],4);
+%             val = NitrousFluid.twoColInterp(data,1,3,2,T,s) * 1000;
         end
         
-        %Function to get the pressure (Pa) of the saturated liquid for a
-        %given specific entropy (J/K/Kg)
-        function val = getSaturatedLiquidPressureFromEntropy(s)
-            T = NitrousFluid.getSaturatedLiquidTemperatureFromEntropy(s);
-            val = FluidType.NITROUS_LIQUID.getVapourPressure(T);
-        end
+%         %Function to get the temperature (T) of the saturated liquid for a
+%         %given specific entropy (J/K/Kg)
+%         function val = getSaturatedLiquidTemperatureFromEntropy(s)
+%             s = s*NitrousFluid.getMolarMass(); %Convert to J/K/mol
+%             data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'entropySaturation.txt'],3);
+%             val = NitrousFluid.oneColInterp(data,2,1,s);
+%         end
         
+%         %Function to get the pressure (Pa) of the saturated liquid for a
+%         %given specific entropy (J/K/Kg)
+%         function val = getSaturatedLiquidPressureFromEntropy(s)
+%             T = NitrousFluid.getSaturatedLiquidTemperatureFromEntropy(s);
+%             val = FluidType.NITROUS_LIQUID.getVapourPressure(T);
+%         end
+        
+        function val = getPressureForTemperatureEnthalpy(T,h)
+            val = NitrousFluidCoolProp.getProperty(FluidProperty.PRESSURE,FluidProperty.TEMPERATURE,T,FluidProperty.SPECIFIC_ENTHALPY,h);
+        end
+
         %Function to get the pressure (Pa) of the gas for a given specific
         %enthalpy (J/Kg) and temperature (K)
         function val = getGasPressureForTemperatureEnthalpy(T,h)
-            data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'gasEnthalpyGenerated.txt'],3);
-            val = NitrousFluid.twoColInterp(data,1,3,2,T,h);
+            val = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.GAS,FluidProperty.PRESSURE,FluidProperty.TEMPERATURE,T,FluidProperty.SPECIFIC_ENTHALPY,h);
+%             data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'gasEnthalpyGenerated.txt'],3);
+%             val = NitrousFluid.twoColInterp(data,1,3,2,T,h);
+        end
+        
+        function val = getTemperatureForPressureEnthalpy(P,h)
+            val = NitrousFluidCoolProp.getProperty(FluidProperty.TEMPERATURE,FluidProperty.PRESSURE,P,FluidProperty.SPECIFIC_ENTHALPY,h);
         end
         
         %Function to get the temperature (K) of the gas for a given specific
         %enthalpy (J/Kg) and pressure (Pa)
         function val = getGasTemperatureForPressureEnthalpy(P,h)
-            data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'gasEnthalpyGenerated2.txt'],3);
-            val = NitrousFluid.twoColInterp(data,1,3,2,P,h);
+            val = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.GAS,FluidProperty.TEMPERATURE,FluidProperty.PRESSURE,P,FluidProperty.SPECIFIC_ENTHALPY,h);
+%             data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'gasEnthalpyGenerated2.txt'],3);
+%             val = NitrousFluid.twoColInterp(data,1,3,2,P,h);
         end
         
         %Function to get the pressure (Pa) of the liquid for a given specific
         %enthalpy (J/Kg) and temperature (K)
         function val = getLiquidPressureForTemperatureEnthalpy(T,h)
-            data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'liquidEnthalpyGenerated.txt'],3);
-            val = NitrousFluid.twoColInterp(data,1,3,2,T,h);
+            val = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.LIQUID,FluidProperty.PRESSURE,FluidProperty.TEMPERATURE,T,FluidProperty.SPECIFIC_ENTHALPY,h);
+%             data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'liquidEnthalpyGenerated.txt'],3);
+%             val = NitrousFluid.twoColInterp(data,1,3,2,T,h);
         end
         
         %Function to get the temperature (K) of the gas for a given specific
         %enthalpy (J/Kg) and pressure (Pa)
         function val = getLiquidTemperatureForPressureEnthalpy(P,h)
-            data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'liquidEnthalpyGenerated2.txt'],3);
-            val = NitrousFluid.twoColInterp(data,1,3,2,P,h);
+            val = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.LIQUID,FluidProperty.TEMPERATURE,FluidProperty.PRESSURE,P,FluidProperty.SPECIFIC_ENTHALPY,h);
+%             data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'liquidEnthalpyGenerated2.txt'],3);
+%             val = NitrousFluid.twoColInterp(data,1,3,2,P,h);
+        end
+        
+        function Cv = getCv(T,P)
+            Cv = NitrousFluidCoolProp.getProperty(FluidProperty.CV,FluidProperty.TEMPERATURE,T,FluidProperty.PRESSURE,P);
         end
         
         %Function to get the specific heat capacity at constant volume for the
         %liquid (In J/K/Kg)
         %at a given Temp (K) and Pressure (Pa)
         function Cv = getLiquidCv(T,P)
-            Cp = NitrousFluid.getLiquidCp(T,P);
-%             gamma = NitrousFluid.getLiquidSpecificHeatRatio(T,P);
-%             Cv = Cp / gamma;
-            smallIncrem = 1*10^-6;
-            %Density and V at this point
-            V0 = 1/NitrousFluid.getLiquidDensity(T-smallIncrem,P);
-            V1 = 1/NitrousFluid.getLiquidDensity(T,P-smallIncrem);
-
-            %Density with small increm in temp and with small increm in P
-            %respectively
-            V2 = 1/NitrousFluid.getLiquidDensity(T+smallIncrem,P);
-            V3 = 1/NitrousFluid.getLiquidDensity(T,P+smallIncrem);
-
-            %Central finite difference approximation
-            %Partial dV/dT at constant pressure
-            dVdT = (V2 - V0) / (2*smallIncrem);
-            %Partial dV/dP at constant temperature
-            dVdP = (V3 - V1) / (2*smallIncrem);
-
-            Cv = Cp + (T) * ( (dVdT)^2 / (dVdP) );
+            Cv = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.LIQUID,FluidProperty.CV,FluidProperty.TEMPERATURE,T,FluidProperty.PRESSURE,P);
+%             Cp = NitrousFluid.getLiquidCp(T,P);
+% %             gamma = NitrousFluid.getLiquidSpecificHeatRatio(T,P);
+% %             Cv = Cp / gamma;
+%             smallIncrem = 1*10^-6;
+%             %Density and V at this point
+%             V0 = 1/NitrousFluid.getLiquidDensity(T-smallIncrem,P);
+%             V1 = 1/NitrousFluid.getLiquidDensity(T,P-smallIncrem);
+% 
+%             %Density with small increm in temp and with small increm in P
+%             %respectively
+%             V2 = 1/NitrousFluid.getLiquidDensity(T+smallIncrem,P);
+%             V3 = 1/NitrousFluid.getLiquidDensity(T,P+smallIncrem);
+% 
+%             %Central finite difference approximation
+%             %Partial dV/dT at constant pressure
+%             dVdT = (V2 - V0) / (2*smallIncrem);
+%             %Partial dV/dP at constant temperature
+%             dVdP = (V3 - V1) / (2*smallIncrem);
+% 
+%             Cv = Cp + (T) * ( (dVdT)^2 / (dVdP) );
         end
         
         %Function to get the specific heat capacity at constant pressure for the
         %gas (In J/K/Kg)
         %at a given Temp (K) and Pressure (Pa)
         function val = getGasCp(T,P)
-            P1 = P/1000; %Need gas in kPa using tabulated data
-            data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'gasCp.txt']); 
-            val = NitrousFluid.twoColInterp(data,1,2,3,T,P1);
-            %Val is in J/K/mol, convert to J/K/Kg
-            val = val / NitrousFluid.getMolarMass();
+            val = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.GAS,FluidProperty.CP,FluidProperty.TEMPERATURE,T,FluidProperty.PRESSURE,P);
+%             P1 = P/1000; %Need gas in kPa using tabulated data
+%             data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'gasCp.txt']); 
+%             val = NitrousFluid.twoColInterp(data,1,2,3,T,P1);
+%             %Val is in J/K/mol, convert to J/K/Kg
+%             val = val / NitrousFluid.getMolarMass();
         end
         
         %Function to get the specific heat capacity for the saturated mixture (In J/K/Kg)
@@ -617,13 +702,19 @@ classdef NitrousFluid
             val = val / NitrousFluid.getMolarMass();
         end
         
+        function val = getLiquidEntropy(T,P)
+             val = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.LIQUID,FluidProperty.SPECIFIC_ENTROPY,FluidProperty.TEMPERATURE,T,FluidProperty.PRESSURE,P);
+        end
+        
         %Function to get the entropy of the liquid in equilibrium with the
         %gas in a saturated state
         function val = getSaturatedLiquidEntropy(T)
-            data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'entropySaturation.txt'],3); 
-            val = NitrousFluid.oneColInterp(data,1,2,T);
-            %Val is in J/K/mol, convert to J/K/Kg
-            val = val / NitrousFluid.getMolarMass();
+            P = SaturatedNitrous.getVapourPressure(T);
+            val = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.LIQUID,FluidProperty.SPECIFIC_ENTROPY,FluidProperty.TEMPERATURE,T,FluidProperty.PRESSURE,P);
+%             data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'entropySaturation.txt'],3); 
+%             val = NitrousFluid.oneColInterp(data,1,2,T);
+%             %Val is in J/K/mol, convert to J/K/Kg
+%             val = val / NitrousFluid.getMolarMass();
         end
 %         
 %         %Find the liquid entropy change for a perturbation in pressure at
@@ -710,66 +801,84 @@ classdef NitrousFluid
 %            val = dPdT;
 %         end
         
+        function val = getPressure(T,density)
+           val = NitrousFluidCoolProp.getProperty(FluidProperty.PRESSURE,FluidProperty.TEMPERATURE,T,FluidProperty.DENSITY,density);
+        end
+
         %Function to get the pressure (Pa) of the liquid for a given T (K)
         %and density (kg/m^3)
         function val = getLiquidPressure(T,density)
-            data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'liquidDensityNISTOnly.txt']); 
-            val = NitrousFluid.twoColInterp(data,1,3,2,T,density) * 1000;
+            val = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.LIQUID,FluidProperty.PRESSURE,FluidProperty.TEMPERATURE,T,FluidProperty.DENSITY,density);
+%             data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'liquidDensityNISTOnly.txt']); 
+%             val = NitrousFluid.twoColInterp(data,1,3,2,T,density) * 1000;
         end
         
         %Function to get the pressure (Pa) of the gas for a given T (K)
         %and density (kg/m^3)
         function val = getGasPressure(T,density)
-            data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'gasDensityNISTOnly.txt']); 
-            val = NitrousFluid.twoColInterp(data,1,3,2,T,density) * 1000;
+            val = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.GAS,FluidProperty.PRESSURE,FluidProperty.TEMPERATURE,T,FluidProperty.DENSITY,density);
+%             data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'gasDensityNISTOnly.txt']); 
+%             val = NitrousFluid.twoColInterp(data,1,3,2,T,density) * 1000;
+        end
+        
+        function val = getEntropy(T,P)
+           val = NitrousFluidCoolProp.getProperty(FluidProperty.SPECIFIC_ENTROPY,FluidProperty.TEMPERATURE,T,FluidProperty.PRESSURE,P); 
         end
         
         function val = getGasEntropy(T,P)
-            P1 = P/1000; %Need gas in kPa using tabulated data
-            data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'entropyGas.txt']); 
-            val = NitrousFluid.twoColInterp(data,1,2,3,T,P1);
-            %Val is in J/K/mol, convert to J/K/Kg
-            val = val / NitrousFluid.getMolarMass();
+            val = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.GAS,FluidProperty.SPECIFIC_ENTROPY,FluidProperty.TEMPERATURE,T,FluidProperty.PRESSURE,P);
+%             P1 = P/1000; %Need gas in kPa using tabulated data
+%             data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'entropyGas.txt']); 
+%             val = NitrousFluid.twoColInterp(data,1,2,3,T,P1);
+%             %Val is in J/K/mol, convert to J/K/Kg
+%             val = val / NitrousFluid.getMolarMass();
         end
         
         %Function to get the specific heat capacity at constant volume for the
         %gas (In J/K/Kg)
         %at a given Temp (K) and Pressure (Pa)
         function Cv = getGasCv(T,P)
-            Cp = NitrousFluid.getGasCp(T,P);
-%             gamma = NitrousFluid.getLiquidSpecificHeatRatio(T,P);
-%             Cv = Cp / gamma;
-            smallIncrem = 1*10^-6;
-            %Density and V at this point
-            V0 = 1/NitrousFluid.getGasDensity(T-smallIncrem,P);
-            V1 = 1/NitrousFluid.getGasDensity(T,P-smallIncrem);
-
-            %Density with small increm in temp and with small increm in P
-            %respectively
-            V2 = 1/NitrousFluid.getGasDensity(T+smallIncrem,P);
-            V3 = 1/NitrousFluid.getGasDensity(T,P+smallIncrem);
-
-            %Central finite difference approximation
-            %Partial dV/dT at constant pressure
-            dVdT = (V2 - V0) / (2*smallIncrem);
-            %Partial dV/dP at constant temperature
-            dVdP = (V3 - V1) / (2*smallIncrem);
-
-            Cv = Cp + (T) * ( (dVdT)^2 / (dVdP) );
+            Cv = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.GAS,FluidProperty.CV,FluidProperty.TEMPERATURE,T,FluidProperty.PRESSURE,P);
+%             Cp = NitrousFluid.getGasCp(T,P);
+% %             gamma = NitrousFluid.getLiquidSpecificHeatRatio(T,P);
+% %             Cv = Cp / gamma;
+%             smallIncrem = 1*10^-6;
+%             %Density and V at this point
+%             V0 = 1/NitrousFluid.getGasDensity(T-smallIncrem,P);
+%             V1 = 1/NitrousFluid.getGasDensity(T,P-smallIncrem);
+% 
+%             %Density with small increm in temp and with small increm in P
+%             %respectively
+%             V2 = 1/NitrousFluid.getGasDensity(T+smallIncrem,P);
+%             V3 = 1/NitrousFluid.getGasDensity(T,P+smallIncrem);
+% 
+%             %Central finite difference approximation
+%             %Partial dV/dT at constant pressure
+%             dVdT = (V2 - V0) / (2*smallIncrem);
+%             %Partial dV/dP at constant temperature
+%             dVdP = (V3 - V1) / (2*smallIncrem);
+% 
+%             Cv = Cp + (T) * ( (dVdT)^2 / (dVdP) );
+        end
+        
+        function val = getSpecificHeatRatio(T,P)
+           val = NitrousFluid.getCp(T,P) / NitrousFluid.getCv(T,P); 
         end
         
         %Function to get the specific heat ratio (Cp/Cv) for the liquid at
         %a given Temp (K) and Pressure (Pa)
         function val = getLiquidSpecificHeatRatio(T,P)
+            val = NitrousFluid.getLiquidCp(T,P) / NitrousFluid.getLiquidCv(T,P);
             %gamma = isothermalCompressibility / adiabaticCompressibility
-            val = NitrousFluid.getLiquidIsothermalCompressibility(T,P) / NitrousFluid.getLiquidAdiabaticCompressibility(T,P);
+            %val = NitrousFluid.getLiquidIsothermalCompressibility(T,P) / NitrousFluid.getLiquidAdiabaticCompressibility(T,P);
         end
         
         %Function to get the specific heat ratio (Cp/Cv) for the gas at
         %a given Temp (K) and Pressure (Pa)
         function val = getGasSpecificHeatRatio(T,P)
+            val = NitrousFluid.getGasCp(T,P) / NitrousFluid.getGasCv(T,P);
             %gamma = isothermalCompressibility / adiabaticCompressibility
-            val = NitrousFluid.getGasIsothermalCompressibility(T,P) / NitrousFluid.getGasAdiabaticCompressibility(T,P);
+%             val = NitrousFluid.getGasIsothermalCompressibility(T,P) / NitrousFluid.getGasAdiabaticCompressibility(T,P);
         end
     end
 end
