@@ -8,7 +8,7 @@
 %By Eddie Brown
 classdef SaturatedNitrous
     properties(Constant)
-        T_CRIT = 309.57; %Critical temp of nitrous in kelvin
+        T_CRIT = 309.52; %Critical temp of nitrous in kelvin
         P_CRIT = 72.51 * 10^5; %Critical pressure of nitrous, Pa
         DENSITY_CRIT = 452; %Critical density of nitrous, Kg/m^3
     end
@@ -19,6 +19,11 @@ classdef SaturatedNitrous
             sVapour = FluidType.NITROUS_GAS.getEntropy(T,P);
             sLiquid = FluidType.NITROUS_LIQUID.getEntropy(T,P);
             s = sVapour*X + sLiquid*(1-X);
+        end
+        
+        function s = getSaturationSpecificEntropy(X,T)
+            P = SaturatedNitrous.getVapourPressure(T);
+            s = SaturatedNitrous.getSpecificEntropy(X,T,P);
         end
         
         %Get's the specific enthalpy of saturated nitrous flow mixture of
@@ -144,10 +149,15 @@ classdef SaturatedNitrous
                 s1 = FluidType.NITROUS_GAS.getEntropy(T1,P1);
                 %Find what pressure need to drop to so that intersect with
                 %saturation line
-                distFromSaturationLine = @(P) FluidType.NITROUS_GENERAL.getTemperatureFromPressureEntropy(real(P),s1) - SaturatedNitrous.getSaturationTemperature(real(P));
-                dDdP = (distFromSaturationLine(P1)-distFromSaturationLine(P1-100)) / (-100);
-                approxdP = (1/dDdP) * distFromSaturationLine(P1);
-                PToDropToForSaturationLine = P1+approxdP;
+                %distFromSaturationLine = @(P) FluidType.NITROUS_GENERAL.getTemperatureFromPressureEntropy(real(P),s1) - SaturatedNitrous.getSaturationTemperature(real(P));
+                %dDdP = (distFromSaturationLine(P1)-distFromSaturationLine(P1-100)) / (-100);
+                %approxdP = (1/dDdP) * distFromSaturationLine(P1);
+                %PToDropToForSaturationLine = P1+approxdP;
+                errSatT = @(T) s1 - SaturatedNitrous.getSaturationSpecificEntropy(1,T);
+                TSat = betterfzero(errSatT,T1,183,SaturatedNitrous.T_CRIT,1e-3);
+                PToDropToForSaturationLine = SaturatedNitrous.getVapourPressure(TSat);
+%                 PToDropToForSaturationLine = NitrousFluidCoolProp.getProperty(FluidProperty.TEMPERATURE,'Smass|twophase',s1,FluidProperty.VAPOR_QUALITY,1);
+              %   disp("Saturation P: "+PToDropToForSaturationLine);
                 if PToDropToForSaturationLine < P2 %Fluid remains as a gas, no need to use NHNE model
                     [T2,v2,~] = RealFlow.getIsentropicTempVelocity(P1,T1,v1,P2,FluidType.NITROUS_GAS,1);
                     X2 = X1;
