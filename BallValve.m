@@ -22,7 +22,8 @@ classdef BallValve < FlowCoeffFlowRestriction
             Cv = obj.fullyOpenCv .* polyval(obj.CvShapePolynomialFit,obj.openAmt);
         end
         
-        function [T,P,X] = getDownstreamTemperaturePressureFromMassFlow(obj,mdot,fluidType,TUpstream,PUpstream,XUpstream)
+        function [T,P,X,v] = getDownstreamTemperaturePressureFromMassFlow(obj,mdot,fluidType,TUpstream,PUpstream,XUpstream,vUpstream)
+            v = vUpstream;
             TSatUpstream = SaturatedNitrous.getSaturationTemperature(PUpstream);
             liquidUpstream = fluidType == FluidType.NITROUS_LIQUID || (fluidType == FluidType.NITROUS_GENERAL && TUpstream<TSatUpstream);
             dP = obj.getPressureChangeForMassFlow(mdot,fluidType,TUpstream,PUpstream,XUpstream);
@@ -70,7 +71,8 @@ classdef BallValve < FlowCoeffFlowRestriction
             end
         end
         
-        function [T,mdot,X] = getDownstreamTemperatureMassFlowFromPressureChange(obj,dP,fluidType,TUpstream,PUpstream,XUpstream)
+        function [T,mdot,X,v] = getDownstreamTemperatureMassFlowFromPressureChange(obj,dP,fluidType,TUpstream,PUpstream,XUpstream,vUpstream)
+            v = vUpstream;
             TSatUpstream = SaturatedNitrous.getSaturationTemperature(PUpstream);
             liquidUpstream = fluidType == FluidType.NITROUS_LIQUID || (fluidType == FluidType.NITROUS_GENERAL && TUpstream<TSatUpstream);
             mdot = obj.getMassFlowForPressureChange(dP,fluidType,TUpstream,PUpstream,XUpstream);

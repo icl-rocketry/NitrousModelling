@@ -10,8 +10,8 @@ mdot = 0.010; %10 gram a sec flow rate
 for i=1:length(openAmt)
     testValve.setOpenAmtFraction(openAmt(i));
     Cv(i) = testValve.getFlowCoefficient(); 
-    dP(i) = testValve.getPressureChangeForMassFlow(mdot,FluidType.NITROUS_LIQUID,290,47.1e5,0);
-    [T(i),P(i),X(i)] = testValve.getDownstreamTemperaturePressureFromMassFlow(mdot,FluidType.NITROUS_LIQUID,290,47.1e5,0);
+    dP(i) = testValve.getPressureChangeForMassFlow(mdot,FluidType.NITROUS_LIQUID,290,47.1e5,0,0);
+    [T(i),P(i),X(i),~] = testValve.getDownstreamTemperaturePressureFromMassFlow(mdot,FluidType.NITROUS_LIQUID,290,47.1e5,0,0);
     %mdot(i) = testValve.getMassFlowForPressureChange(dP,FluidType.NITROUS_LIQUID,290,60e5,0);
 end
 

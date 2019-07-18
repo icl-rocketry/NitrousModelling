@@ -29,6 +29,13 @@ classdef SaturatedNitrous
         %Get's the specific enthalpy of saturated nitrous flow mixture of
         %given quality X, temperature T and pressure P
         function h = getSpecificEnthalpy(X,T,P)
+            if(X == 0)
+               h = FluidType.NITROUS_LIQUID.getSpecificEnthalpy(T,P);
+               return;
+            elseif(X == 1)
+               h = FluidType.NITROUS_GAS.getSpecificEnthalpy(T,P);
+               return;
+            end
             hVapour = FluidType.NITROUS_GAS.getSpecificEnthalpy(T,P);
             hLiquid = FluidType.NITROUS_LIQUID.getSpecificEnthalpy(T,P);
             h = hVapour*X + hLiquid*(1-X);
@@ -138,6 +145,7 @@ classdef SaturatedNitrous
                 h2 = SaturatedNitrous.getSpecificEnthalpy(X1,T1,vapourPressure); %Enthalpy after pressure drop
                 KEGain = h1-h2; %specific KE gain is difference in fluid enthalpies upstream and downstream
                 v1 = sqrt(2*(0.5*v1.^2 + KEGain)); %Energy balance, assuming no other losses
+                v1 = real(v1); 
                 P1 = vapourPressure;
                 if P1 == P2 %Flow never reached saturation line
                     X2 = X1;

@@ -2,11 +2,11 @@
 %(perhaps variable) Cv - flow coefficient. Eg. a valve or an orifice
 classdef (Abstract) FlowCoeffFlowRestriction < FlowRestriction
     methods (Abstract)
-        getFlowCoefficient(obj)
+        coeff = getFlowCoefficient(obj)
     end
     
     methods 
-        function mdot = getMassFlowForPressureChange(obj,dP,fluidType,TUpstream,PUpstream,XUpstream)
+        function mdot = getMassFlowForPressureChange(obj,dP,fluidType,TUpstream,PUpstream,XUpstream,vUpstream)
             if (fluidType == FluidType.NITROUS_GENERAL || fluidType == FluidType.NITROUS_LIQUID || fluidType == FluidType.NITROUS_GAS) && XUpstream ~= 1 && XUpstream ~= 0
                rho = SaturatedNitrous.getDensity(XUpstream,TUpstream,PUpstream); 
             else
@@ -15,7 +15,7 @@ classdef (Abstract) FlowCoeffFlowRestriction < FlowRestriction
             mdot = FlowCoefficient.getMassFlowFromCoeff(obj.getFlowCoefficient(),dP,rho);
         end
         
-        function dP = getPressureChangeForMassFlow(obj,mdot,fluidType,TUpstream,PUpstream,XUpstream)
+        function dP = getPressureChangeForMassFlow(obj,mdot,fluidType,TUpstream,PUpstream,XUpstream,vUpstream)
             if (fluidType == FluidType.NITROUS_GENERAL || fluidType == FluidType.NITROUS_LIQUID || fluidType == FluidType.NITROUS_GAS) && XUpstream ~= 1 && XUpstream ~= 0
                rho = SaturatedNitrous.getDensity(XUpstream,TUpstream,PUpstream); 
             else
