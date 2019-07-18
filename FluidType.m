@@ -267,8 +267,8 @@ classdef FluidType
             P = obj.pressureFromTempEnthalpyHandle(T,h);
         end
         
-        function P = getTemperatureFromPressureEnthalpy(obj,P,h)
-            P = obj.temperatureFromPressureEnthalpyHandle(P,h);
+        function T = getTemperatureFromPressureEnthalpy(obj,P,h)
+            T = obj.temperatureFromPressureEnthalpyHandle(P,h);
         end
         
 %         %DO NOT USE. uses calcEntropyChange and NIST data as a

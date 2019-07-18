@@ -34,6 +34,14 @@ classdef SaturatedNitrous
             h = hVapour*X + hLiquid*(1-X);
         end
         
+        %Gets the density of the mixture for a given quality X, temperature
+        %T and pressure P
+        function rho = getDensity(X,T,P)
+            rhoVapour = FluidType.NITROUS_GAS.getDensity(T,P);
+            rhoLiquid = FluidType.NITROUS_LIQUID.getDensity(T,P);
+            rho = rhoVapour*X + rhoLiquid*(1-X);
+        end
+        
         %Bubble growth time characteristic as defined in "Modeling feed
         %system flow physics for self pressurising propellants" by Jonny
         %Dyer https://arc.aiaa.org/doi/pdf/10.2514/6.2007-5702. 1 denotes
