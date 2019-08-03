@@ -24,10 +24,28 @@ classdef BallValve < FlowCoeffFlowRestriction
         
         function [T,P,X,v] = getDownstreamTemperaturePressureFromMassFlow(obj,mdot,fluidType,TUpstream,PUpstream,XUpstream,vUpstream)
             v = vUpstream;
+%             if(mdot == 0)
+%                T = TUpstream;
+%                P = PUpstream;
+%                X = XUpstream;
+%                return;
+%             end
             TSatUpstream = SaturatedNitrous.getSaturationTemperature(PUpstream);
             liquidUpstream = fluidType == FluidType.NITROUS_LIQUID || (fluidType == FluidType.NITROUS_GENERAL && TUpstream<TSatUpstream);
             dP = obj.getPressureChangeForMassFlow(mdot,fluidType,TUpstream,PUpstream,XUpstream);
             P = PUpstream + dP;
+            
+            if(isnan(P))
+               ME = MException('BallValve:PNan','P is NaN for given mass flow (Can take any value?)');
+               throw(ME);
+            end
+            
+            if(P < 88e3)
+               %disp("P TOO LOW!!"); 
+               ME = MException('BallValve:DownstreamPTooLow','Downstream P too low for given mass flow');
+               throw(ME);
+            end
+            
             %Isenthalpic
             isSaturated = false;
             if (fluidType == FluidType.NITROUS_GENERAL || fluidType == FluidType.NITROUS_LIQUID || fluidType == FluidType.NITROUS_GAS) && XUpstream ~= 1 && XUpstream ~= 0

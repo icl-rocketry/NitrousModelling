@@ -16,6 +16,13 @@ classdef SaturatedNitrous
         %Get's the specific entropy of saturated nitrous flow mixture of
         %given quality X, temperature T and pressure P
         function s = getSpecificEntropy(X,T,P)
+            if(X == 0)
+                s = FluidType.NITROUS_LIQUID.getEntropy(T,P);
+                return;
+            elseif(X == 1)
+                s = FluidType.NITROUS_GAS.getEntropy(T,P);
+                return;
+            end
             sVapour = FluidType.NITROUS_GAS.getEntropy(T,P);
             sLiquid = FluidType.NITROUS_LIQUID.getEntropy(T,P);
             s = sVapour*X + sLiquid*(1-X);
@@ -44,6 +51,13 @@ classdef SaturatedNitrous
         %Gets the density of the mixture for a given quality X, temperature
         %T and pressure P
         function rho = getDensity(X,T,P)
+            if(X == 0)
+                rho = FluidType.NITROUS_LIQUID.getDensity(T,P);
+                return;
+            elseif(X==1)
+                rho = FluidType.NITROUS_GAS.getDensity(T,P);
+                return;
+            end
             rhoVapour = FluidType.NITROUS_GAS.getDensity(T,P);
             rhoLiquid = FluidType.NITROUS_LIQUID.getDensity(T,P);
             rho = rhoVapour*X + rhoLiquid*(1-X);
@@ -57,7 +71,7 @@ classdef SaturatedNitrous
             vapourPressure = SaturatedNitrous.getVapourPressure(T1);
             rhoLiq = FluidType.NITROUS_LIQUID.getDensity(T1,vapourPressure);
             %vapourPressure = SaturatedNitrous.getVapourPressure(T1);
-            Tb = sqrt(1.5 * (rhoLiq/(vapourPressure-P2)));
+            Tb = real(sqrt(1.5 * (rhoLiq/(vapourPressure-P2))));
         end
         
         %Residence time (proportional to how long fluid will take to do this) characteristic as defined in "Modeling feed
@@ -68,7 +82,7 @@ classdef SaturatedNitrous
         function Tr = getResidenceTime(P1,T1,P2,length)
             vapourPressure = SaturatedNitrous.getVapourPressure(T1);
             rhoLiq = FluidType.NITROUS_LIQUID.getDensity(T1,vapourPressure);
-            Tr = length*sqrt(rhoLiq/(2*(P1-P2)));
+            Tr = real(length*sqrt(rhoLiq/(2*(P1-P2))));
         end
         
         %Get the non-equilibrium flow parameter as defined in "Modeling feed
@@ -87,18 +101,11 @@ classdef SaturatedNitrous
             k = SaturatedNitrous.getBubbleGrowthTimeCharacteristic(P1,T1,P2) / SaturatedNitrous.getResidenceTime(P1,T1,P2,length);
         end
         
-        %Get the downstream mass flow rate predicted by an ideal incompressible
-        %assumption for a given upstream pressure, temperature and velocity
-        %and given downstream pressure. G is mass flow per unit area, all
-        %units SI. Temperature given by this also assumes flow is
-        %adiabatic and quality given by this assumes isentropic. Set ignoreTempAndQuality to true if you don't want to calculate
-        %the temperature and quality downstream (will make this 1000x faster to
-        %compute)
-        function [X2,T2,v2,h2,G] = getDownstreamIncompressibleMassFlowTemp(X1,P1,T1,P2,v1,ignoreTempAndQuality)
-            rhoL = FluidType.NITROUS_LIQUID.getDensity(T1,P1); %Upstream density, as incompressible assume is constant
-            rhoG = FluidType.NITROUS_GAS.getDensity(T1,P1);
-            rho = X1*rhoG + (1-X1)*rhoL;
-            G = sqrt(2.*rho.*(P1-P2) + rho.^2.*v1.^2);
+        function [X2,T2,v2,h2,P2] = getDownstreamIncompressiblePressureTemp(X1,P1,T1,G,v1,ignoreTempAndQuality)
+            rho = SaturatedNitrous.getDensity(X1,T1,P1); %Upstream density, as incompressible assume is constant
+            dP = (0.5*(G.^2 - (rho.^2).*(v1.^2))./rho); %P1 - P2
+            P2 = P1 - dP;
+            
             v2 = G ./ rho; %G = rho * v
             %Assume total enthalpy constant to figure out T
             h0 = SaturatedNitrous.getSpecificEnthalpy(X1,T1,P1) + (v1.^2)./2;
@@ -108,6 +115,49 @@ classdef SaturatedNitrous
             if ~exist('ignoreTemp','var') || ~ignoreTempAndQuality
                 T2 = SaturatedNitrous.getSaturationTemperature(P2);
                 X2 = NitrousFluidCoolProp.getProperty(FluidProperty.VAPOR_QUALITY,FluidProperty.PRESSURE,P2,FluidProperty.SPECIFIC_ENTHALPY,h2);
+                if(X2 == -1) %Answer is not on saturation line
+                    TSat = T2;
+                    T2 = NitrousFluidCoolProp.getProperty(FluidProperty.TEMPERATURE,FluidProperty.PRESSURE,P2,FluidProperty.SPECIFIC_ENTHALPY,h2);
+                    if(T2 <= TSat)
+                        X2 = 0; %Liquid
+                    else
+                        X2 = 1; %Gas
+                    end
+                end
+            else
+                T2 = -1; 
+                X2 = 0;
+            end
+        end
+        
+        %Get the downstream mass flow rate predicted by an ideal incompressible
+        %assumption for a given upstream pressure, temperature and velocity
+        %and given downstream pressure. G is mass flow per unit area, all
+        %units SI. Temperature given by this also assumes flow is
+        %adiabatic and quality given by this assumes isentropic. Set ignoreTempAndQuality to true if you don't want to calculate
+        %the temperature and quality downstream (will make this 1000x faster to
+        %compute)
+        function [X2,T2,v2,h2,G] = getDownstreamIncompressibleMassFlowTemp(X1,P1,T1,P2,v1,ignoreTempAndQuality)
+            rho = SaturatedNitrous.getDensity(X1,T1,P1); %Upstream density, as incompressible assume is constant
+            G = sqrt(2.*rho.*(P1-P2) + (rho.^2).*v1.^2);
+            v2 = G ./ rho; %G = rho * v
+            %Assume total enthalpy constant to figure out T
+            h0 = SaturatedNitrous.getSpecificEnthalpy(X1,T1,P1) + (v1.^2)./2;
+            %h0 = FluidType.NITROUS_LIQUID.getSpecificEnthalpy(T1,P1) + (v1.^2)./2;
+            h2 = h0 - (v2.^2/2); %Downstream enthalpy
+            
+            if ~exist('ignoreTemp','var') || ~ignoreTempAndQuality
+                T2 = SaturatedNitrous.getSaturationTemperature(P2);
+                X2 = NitrousFluidCoolProp.getProperty(FluidProperty.VAPOR_QUALITY,FluidProperty.PRESSURE,P2,FluidProperty.SPECIFIC_ENTHALPY,h2);
+                if(X2 == -1) %Answer is not on saturation line
+                    TSat = T2;
+                    T2 = NitrousFluidCoolProp.getProperty(FluidProperty.TEMPERATURE,FluidProperty.PRESSURE,P2,FluidProperty.SPECIFIC_ENTHALPY,h2);
+                    if(T2 <= TSat)
+                        X2 = 0; %Liquid
+                    else
+                        X2 = 1; %Gas
+                    end
+                end
             else
                 T2 = -1; 
                 X2 = 0;
@@ -117,6 +167,27 @@ classdef SaturatedNitrous
 %                 %h =  FluidType.NITROUS_LIQUID.getSpecificEnthalpy(real(TGuess),P2);
 %                 err = h-h2; %0 if downstream enthalpy matches
 %             end
+        end
+        
+        function [TSat,PToDropToForSaturationLine] = getWhereIsentropicIntersectWithSaturationCurve(T,P)
+            TSatUpstream = SaturatedNitrous.getSaturationTemperature(P);
+            liquidUpstream = T<TSatUpstream;
+            if(abs(1-T/TSatUpstream) < 0.0001)
+               TSat = T;
+               PToDropToForSaturationLine = P;
+               return;
+            end
+            XUpstream = 1;
+            if(liquidUpstream)
+               XUpstream = 0;
+               s1 = FluidType.NITROUS_LIQUID.getEntropy(T,P);
+            else
+               s1 = FluidType.NITROUS_GAS.getEntropy(T,P);
+            end
+            
+            errSatT = @(T) s1 - SaturatedNitrous.getSaturationSpecificEntropy(XUpstream,real(T));
+            TSat = real(betterfzero(errSatT,T,183,SaturatedNitrous.T_CRIT,1e-3));
+            PToDropToForSaturationLine = SaturatedNitrous.getVapourPressure(TSat);
         end
         
         %Get the flow rate and characteristics predicted by a
@@ -139,24 +210,29 @@ classdef SaturatedNitrous
                 %Drop pressure to vapour pressure and keep a track of
                 %velocity,temp etc...
                 vapourPressure = max(SaturatedNitrous.getVapourPressure(T1),P2);
-                h1 = SaturatedNitrous.getSpecificEnthalpy(X1,T1,P1); %Enthalpy upstream
-                [T1,~,~] = RealFlow.getIsentropicTempVelocity(P1,T1,v1,vapourPressure,FluidType.NITROUS_LIQUID,1);
+                %h1 = SaturatedNitrous.getSpecificEnthalpy(X1,T1,P1); %Enthalpy upstream
+                [T1,vRealFlow,~] = RealFlow.getIsentropicTempVelocity(P1,T1,v1,vapourPressure,FluidType.NITROUS_LIQUID,1);
+                %disp("vRealFlow: "+vRealFlow);
                 %[T1,~,~] = RealFlow.getIsentropicTempVelocity(P1,T1,T1,FluidType.NITROUS_LIQUID.getCp(T1,P1),vapourPressure,FluidType.NITROUS_LIQUID);
-                h2 = SaturatedNitrous.getSpecificEnthalpy(X1,T1,vapourPressure); %Enthalpy after pressure drop
-                KEGain = h1-h2; %specific KE gain is difference in fluid enthalpies upstream and downstream
-                v1 = sqrt(2*(0.5*v1.^2 + KEGain)); %Energy balance, assuming no other losses
-                v1 = real(v1); 
+%                 h2 = SaturatedNitrous.getSpecificEnthalpy(X1,T1,vapourPressure); %Enthalpy after pressure drop
+%                 KEGain = h1-h2; %specific KE gain is difference in fluid enthalpies upstream and downstream
+%                 v1 = sqrt(2*(0.5*v1.^2 + KEGain)); %Energy balance, assuming no other losses
+                v1 = real(vRealFlow); 
                 P1 = vapourPressure;
                 if P1 == P2 %Flow never reached saturation line
+                    h2 = SaturatedNitrous.getSpecificEnthalpy(X1,T1,vapourPressure); %Enthalpy after pressure drop
                     X2 = X1;
                     T2 = T1;
+                    if(imag(T2)~=0)
+                       error('T2 became complex (1)'); 
+                    end
                     v2 = v1;
                     %h2 = h2;
                     rhoLiq = FluidType.NITROUS_LIQUID.getDensity(T2,P2);
                     G = rhoLiq * v2;
                     return;
                 end
-            end       
+            end      
             
             %While a vapour not yet at saturation line (P < Vapour
             %pressure within 4%) use RealFlow to handle transport
@@ -169,8 +245,8 @@ classdef SaturatedNitrous
                 %dDdP = (distFromSaturationLine(P1)-distFromSaturationLine(P1-100)) / (-100);
                 %approxdP = (1/dDdP) * distFromSaturationLine(P1);
                 %PToDropToForSaturationLine = P1+approxdP;
-                errSatT = @(T) s1 - SaturatedNitrous.getSaturationSpecificEntropy(1,T);
-                TSat = betterfzero(errSatT,T1,183,SaturatedNitrous.T_CRIT,1e-3);
+                errSatT = @(T) s1 - SaturatedNitrous.getSaturationSpecificEntropy(1,real(T));
+                TSat = real(betterfzero(errSatT,T1,183,SaturatedNitrous.T_CRIT,1e-3));
                 PToDropToForSaturationLine = SaturatedNitrous.getVapourPressure(TSat);
 %                 PToDropToForSaturationLine = NitrousFluidCoolProp.getProperty(FluidProperty.TEMPERATURE,'Smass|twophase',s1,FluidProperty.VAPOR_QUALITY,1);
               %   disp("Saturation P: "+PToDropToForSaturationLine);
@@ -179,6 +255,9 @@ classdef SaturatedNitrous
                     X2 = X1;
                     h2 = FluidType.NITROUS_GAS.getEnthalpy(T2,P2);
                     G = v2 * FluidType.NITROUS_GAS.getDensity(T2,P2); %G = rho * v
+                    if(imag(T2)~=0)
+                       error('T2 became complex (2)'); 
+                    end
                     return;
                 end
                 %Drop fluid to saturation line then continue with NHNE
@@ -188,8 +267,13 @@ classdef SaturatedNitrous
             end
             
             k = SaturatedNitrous.getNonEquilibriumFlowParameter(P1,T1,P2,length);
+            
             incompressibleCoeff = (1-1/(1+k)); %From correction to dyer by solomon
             hemCoeff = (1/(1+k)); %From correction to dyer by solomon
+            
+            if(imag(T1)~=0)
+                error('T1 became complex (1)');
+            end
             
             %Calculate flow both incompressibly and with HEM
             [X2Inc,T2Inc,v2Inc,h2Inc,GInc] = SaturatedNitrous.getDownstreamIncompressibleMassFlowTemp(X1,P1,T1,P2,v1);
@@ -200,6 +284,64 @@ classdef SaturatedNitrous
             v2 = incompressibleCoeff * v2Inc + hemCoeff * v2Hem;
             h2 = incompressibleCoeff * h2Inc + hemCoeff * h2Hem;
             G = incompressibleCoeff * GInc + hemCoeff * GHem;
+            if(imag(T2)~=0)
+                disp(k);
+                disp(P1);
+                disp(T1);
+                disp(P2);
+                disp(length);
+                error('T2 became complex (3)');
+            end
+        end
+        
+        function [X2,T2,v2,h2,P2] = getDownstreamIsentropicSaturationHEMFlowPressure(X1,T1,P1,G,v1)
+            rho1 = SaturatedNitrous.getDensity(X1,T1,P1);
+            P2Old = -1;
+            rho2 = rho1; %Initially assume downstream density is the same, refine this through iteration
+            X2 = X1; %Initial value, will be changed
+            T2 = T1; %Initial value will be changed
+            s1 = SaturatedNitrous.getSpecificEntropy(X1,T1,P1); %Entropy upstream
+            h1 = SaturatedNitrous.getSpecificEnthalpy(X1,T1,P1); %Enthalpy upstream
+            iter = 0;
+            P2 = P1; %Initial value, will change
+            while(abs(P2-P2Old) > 0.5 && iter < 100) %Until converge or 100 iterations
+                P2Old = P2;
+                iter = iter+1;
+                v2 = G ./ rho2;
+                KEGain = 0.5.*v2.^2 - 0.5.*v1.^2;
+                h2 = h1-KEGain;
+                
+                hErr = @(P) h2 - NitrousFluidCoolProp.getProperty(FluidProperty.SPECIFIC_ENTHALPY,FluidProperty.PRESSURE,P,FluidProperty.DENSITY,rho2);
+%                 tic;
+                %P2 = NitrousFluid.getPressureFromDensityEnthalpy(rho2,h2);
+                P2 = fzero(hErr,P1);
+%                 toc;
+%                 tic;
+%                 P22 = NitrousFluid.getPressureFromDensityEnthalpy(rho2,h2);
+%                 
+%                 P2 = fzero(hErr,P22);
+%                 toc;
+%                 disp(P2+" "+P22+" "+abs(P22-P2));
+                 
+                %P2 = NitrousFluidCoolProp.getProperty(FluidProperty.PRESSURE,FluidProperty.SPECIFIC_ENTHALPY,h2,FluidProperty.TEMPERATURE,T2);
+                T2 = SaturatedNitrous.getSaturationTemperature(P2); %Drops to saturation temp of new pressure
+                X2 = NitrousFluidCoolProp.getProperty(FluidProperty.VAPOR_QUALITY,FluidProperty.PRESSURE,P2,FluidProperty.SPECIFIC_ENTROPY,s1);
+                if(X2 == -1) %NOT Saturated
+                    TSat = T2;
+                    T2 = NitrousFluidCoolProp.getProperty(FluidProperty.TEMPERATURE,FluidProperty.PRESSURE,P2,FluidProperty.SPECIFIC_ENTROPY,s1);
+                    if(T2 <= TSat)
+                        X2 = 0; %Liquid
+                    else
+                        X2 = 1; %Gas
+                    end
+                    rho2 = NitrousFluidCoolProp.getProperty(FluidProperty.DENSITY,FluidProperty.TEMPERATURE,T2,FluidProperty.PRESSURE,P2);
+                else
+                    rho2 = NitrousFluidCoolProp.getProperty(FluidProperty.DENSITY,FluidProperty.PRESSURE,P2,FluidProperty.VAPOR_QUALITY,X2);
+                end
+            end
+%             disp("Iter num: "+iter);
+%             [X2Test,T2Test,v2Test,h2Test,GTest] = SaturatedNitrous.getDownstreamIsentropicSaturatedHEMFlowCond(X1,T1,P1,P2,v1);
+%             disp(GTest);
         end
         
         %Get downstream conditions of a flow that is modelled by isentropic
@@ -217,7 +359,8 @@ classdef SaturatedNitrous
                 %velocity,temp etc...
                 vapourPressure = max(SaturatedNitrous.getVapourPressure(T1),P2);
                 h1 = SaturatedNitrous.getSpecificEnthalpy(X1,T1,P1); %Enthalpy upstream
-                [T1,~,~] = RealFlow.getIsentropicTempVelocity(P1,T1,T1,FluidType.NITROUS_LIQUID.getCp(T1,P1),vapourPressure,FluidType.NITROUS_LIQUID);
+                [T1,~,~] = RealFlow.getIsentropicTempVelocity(P1,T1,v1,P2,FluidType.NITROUS_GENERAL);
+                %[T1,~,~] = RealFlow.getIsentropicTempVelocity(P1,T1,T1,FluidType.NITROUS_LIQUID.getCp(T1,P1),vapourPressure,FluidType.NITROUS_LIQUID);
                 h2 = SaturatedNitrous.getSpecificEnthalpy(X1,T1,vapourPressure); %Enthalpy after pressure drop
                 KEGain = h1-h2; %specific KE gain is difference in fluid enthalpies upstream and downstream
                 v1 = sqrt(2*(0.5*v1.^2 + KEGain)); %Energy balance, assuming no other losses
@@ -240,7 +383,22 @@ classdef SaturatedNitrous
             X2 = NitrousFluidCoolProp.getProperty(FluidProperty.VAPOR_QUALITY,FluidProperty.PRESSURE,P2,FluidProperty.SPECIFIC_ENTROPY,s1);
             %X2 = real(fzero(@(X) real(SaturatedNitrous.getSpecificEntropy(real(X),T2,P2)-s1),X1)); %Find quality downstream that satisfies isentropic condition
             if X2 < 0 || X2 > 1
-               error('INVALID x2 encountered'); 
+                if(X2 == -1)
+                   %Not saturated
+                   TSat = T2;
+                   T2 = NitrousFluidCoolProp.getProperty(FluidProperty.TEMPERATURE,FluidProperty.PRESSURE,P2,FluidProperty.SPECIFIC_ENTROPY,s1);
+                   if(T2 <= TSat)
+                       X2 = 0; %Liquid
+                   else
+                       X2 = 1; %Gas
+                   end
+                else
+                    error('INVALID x2 encountered'); 
+                end
+%                 disp("X2: "+X2);
+%                 disp("P1: "+P1);
+%                 disp("P2: "+P2);
+%                 disp("X1: "+X1);
             end
             h2 = SaturatedNitrous.getSpecificEnthalpy(X2,T2,P2); %Gets the specific enthalpy downstream
             KEGain = h1-h2; %specific KE gain is difference in fluid enthalpies upstream and downstream

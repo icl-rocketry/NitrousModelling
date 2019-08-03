@@ -277,6 +277,13 @@ classdef NitrousFluid
                numCols = 4; 
            end
            if ~isKey(cachedData,fName) %If map does not contain the contents of the file
+               if(endsWith(fName,'.mat'))
+                   fileData = load(fName);
+                   cachedData(fName) = fileData.data;
+                   data = fileData.data;
+                   return;
+               end
+               
                %Load data from the file and put into map
                fileHandle = fopen(fName,'r'); %Open file with read perms
                
@@ -284,23 +291,24 @@ classdef NitrousFluid
                fgetl(fileHandle); %Ignore first line
                fgetl(fileHandle); %Ignore second line
                lineNum = 1;
+               %Regex (.+?)\s(.+?)\s(.+?)\s(.+?) for parsing columns,
+               %lookup regular expressions in programming if not sure
+               %what this is
+               regex = '(.+?)';
+               for j=1:numCols-1
+                   regex = [regex,'\s+(.+'];
+                   if(j ~= numCols-1)
+                       regex = [regex,'?)'];
+                   else
+                       regex = [regex,')'];
+                   end
+               end
                while true %Until loop breaks
                    lineRead = fgetl(fileHandle); %Read next line from file
                    if ~ischar(lineRead) %If this line does not exist (reached end of file)
                        break; %Exit loop
                    end
-                   %Regex (.+?)\s(.+?)\s(.+?)\s(.+?) for parsing columns,
-                   %lookup regular expressions in programming if not sure
-                   %what this is
-                   regex = '(.+?)';
-                   for j=1:numCols-1
-                       regex = [regex,'\s+(.+'];
-                       if(j ~= numCols-1)
-                          regex = [regex,'?)']; 
-                       else
-                          regex = [regex,')']; 
-                       end
-                   end
+                   
                    tokens = regexp(lineRead,regex,'tokens'); %Capture groups from the regex as an array
                    for i=1:numCols %For each col, 1 to 4
                         %Put into matrix the numeric value captured by this
@@ -700,6 +708,13 @@ classdef NitrousFluid
             val = NitrousFluid.oneColInterp(data,1,2,T);
             %Val is in J/K/mol, convert to J/K/Kg
             val = val / NitrousFluid.getMolarMass();
+        end
+        
+        function val = getPressureFromDensityEnthalpy(rho,h)
+            data = NitrousFluid.getDataFromFile(['preBakedData',filesep,'pressureDensityEnthalpy.mat']);
+%             data = NitrousFluid.getDataFromFile(['preBakedData',filesep,'pressureDensityEnthalpy.txt'],3);
+%             save('test.mat','data');
+            val = NitrousFluid.twoColInterp(data,2,1,3,h,rho);
         end
         
         function val = getLiquidEntropy(T,P)
