@@ -10,7 +10,15 @@ classdef (Abstract) FlowCoeffFlowRestriction < FlowRestriction
             if (fluidType == FluidType.NITROUS_GENERAL || fluidType == FluidType.NITROUS_LIQUID || fluidType == FluidType.NITROUS_GAS) && XUpstream ~= 1 && XUpstream ~= 0
                rho = SaturatedNitrous.getDensity(XUpstream,TUpstream,PUpstream); 
             else
-               rho = fluidType.getDensity(TUpstream,PUpstream); 
+                if(fluidType == FluidType.NITROUS_GENERAL)
+                    if(XUpstream == 1)
+                        rho = FluidType.NITROUS_GAS.getDensity(TUpstream,PUpstream);
+                    elseif(XUpstream == 0)
+                        rho = FluidType.NITROUS_LIQUID.getDensity(TUpstream,PUpstream);
+                    end
+                else
+                    rho = fluidType.getDensity(TUpstream,PUpstream);
+                end
             end
             mdot = FlowCoefficient.getMassFlowFromCoeff(obj.getFlowCoefficient(),dP,rho);
         end
@@ -19,7 +27,15 @@ classdef (Abstract) FlowCoeffFlowRestriction < FlowRestriction
             if (fluidType == FluidType.NITROUS_GENERAL || fluidType == FluidType.NITROUS_LIQUID || fluidType == FluidType.NITROUS_GAS) && XUpstream ~= 1 && XUpstream ~= 0
                rho = SaturatedNitrous.getDensity(XUpstream,TUpstream,PUpstream); 
             else
-               rho = fluidType.getDensity(TUpstream,PUpstream); 
+                if(fluidType == FluidType.NITROUS_GENERAL)
+                    if(XUpstream == 1)
+                        rho = FluidType.NITROUS_GAS.getDensity(TUpstream,PUpstream); 
+                    elseif(XUpstream == 0)
+                        rho = FluidType.NITROUS_LIQUID.getDensity(TUpstream,PUpstream); 
+                    end
+                else
+                    rho = fluidType.getDensity(TUpstream,PUpstream); 
+                end
             end
             dP = FlowCoefficient.getPressureChangeFromMassFlow(obj.getFlowCoefficient(),mdot,rho);
         end

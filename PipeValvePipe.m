@@ -33,6 +33,13 @@ classdef PipeValvePipe < FlowRestriction
             P2 = PUpstream + (0.3*dP); %Initial guess for pressure downstream of pipe 1
             P3 = P2; %Initial guess for P3
 %             tic;
+            if(obj.valve.getFlowCoefficient() == 0)
+               T = TUpstream;
+               mdot = 0;
+               X = XUpstream;
+               vDownstream = 0;
+               return;
+            end
             P2 = fzero(@(X) P2Err(X),P2);
             P2 = real(abs(P2));
             if(P2 < PFinal)
@@ -51,6 +58,14 @@ classdef PipeValvePipe < FlowRestriction
 %             disp("P4: "+PFinal);
             
             function err = P2Err(P2)
+                if(isnan(P2))
+                    T = nan;
+                    mdot = 0;
+                    X = nan;
+                    vDownstream = 0;
+                    err = 10000;
+                    return;
+                end
                 P2 = real(abs(P2));
                 if(P2 < PFinal)
                    P2 = PFinal; 
@@ -97,7 +112,36 @@ classdef PipeValvePipe < FlowRestriction
                    X = X3;
                    vDownstream = vDownstream3;
                 else
-                    [T,mdot2,X,vDownstream] = obj.pipe2.getDownstreamTemperatureMassFlowFromPressureChange(PFinal-P3,fluidType,T3,P3,X3,vDownstream3);
+                    if(imag(P3) ~= 0)
+                        disp("P1: "+PUpstream);
+                        disp("T1: "+TUpstream);
+                        disp("X1: "+XUpstream);
+                        disp("P2: "+P2);
+                        disp("T2: "+T2);
+                        disp("X2: "+X2);
+                        disp("P3: "+P3);
+                        disp("T3: "+T3);
+                        disp("X3: "+X3);
+                        disp("mdot: "+mdot);
+                        drawnow;
+                        error('P3 complex!');
+                    end
+                    try
+                        [T,mdot2,X,vDownstream] = obj.pipe2.getDownstreamTemperatureMassFlowFromPressureChange(PFinal-P3,fluidType,T3,P3,X3,vDownstream3);
+                    catch errorExc
+                        disp("P1: "+PUpstream);
+                        disp("T1: "+TUpstream);
+                        disp("X1: "+XUpstream);
+                        disp("P2: "+P2);
+                        disp("T2: "+T2);
+                        disp("X2: "+X2);
+                        disp("P3: "+P3);
+                        disp("T3: "+T3);
+                        disp("X3: "+X3);
+                        disp("mdot: "+mdot);
+                        drawnow;
+                        rethrow(errorExc);
+                    end
                 end
                 err = (mdot-mdot2);
 %                 disp("mdot: "+mdot+" mdot2: "+mdot2+" err: "+err);

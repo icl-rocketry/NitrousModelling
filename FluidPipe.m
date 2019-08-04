@@ -21,7 +21,8 @@ classdef FluidPipe < FlowRestriction
                error('Unsupported fluid type. Only supports nitrous right now'); 
             end
             [X,T,v,~,G] = SaturatedNitrous.getDownstreamSaturatedNHNEFlowCond(XUpstream,TUpstream,PUpstream,PUpstream+dP,vUpstream,obj.pipeLength);
-            if(abs(dP) < 1000 && (X == 1 || X == 0) && dP < 0) %Single phase flow can behave badly with dP < 1K due to resolution of fluid data
+            %&& (X >= 0.9 || X <= 0.1) 
+            if(abs(dP) < 1000 && dP < 0) %can behave badly with dP < 1K due to resolution of fluid data
                 %Values for dP of -1000Pa
                 [Xtest,Ttest,vtest,~,Gtest] = SaturatedNitrous.getDownstreamSaturatedNHNEFlowCond(XUpstream,TUpstream,PUpstream,PUpstream-1000,vUpstream,obj.pipeLength);
                 %Mass flow scales linearly with sqrt dP approximately
@@ -31,7 +32,8 @@ classdef FluidPipe < FlowRestriction
                 h2 = SaturatedNitrous.getSpecificEnthalpy(XUpstream,TUpstream,PUpstream) - specificKE;
                 T = fluidType.getTemperatureFromPressureEnthalpy(PUpstream+dP,h2);
             end
-            mdot = G*obj.crossSectionA;
+            v = real(v);
+            mdot = real(G*obj.crossSectionA);
         end
         
         function mdot = getMassFlowForPressureChange(obj,dP,fluidType,TUpstream,PUpstream,XUpstream,vUpstream)

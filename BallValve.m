@@ -35,6 +35,15 @@ classdef BallValve < FlowCoeffFlowRestriction
             dP = obj.getPressureChangeForMassFlow(mdot,fluidType,TUpstream,PUpstream,XUpstream);
             P = PUpstream + dP;
             
+            if(imag(P) ~= 0)
+                disp("P upstream: "+PUpstream);
+                disp("dP: "+dP);
+                disp("mdot: "+mdot);
+                disp("T upstream: "+TUpstream);
+                disp("X Upstream: "+XUpstream);
+               error('P is complex downstream of valve!');
+            end
+            
             if(isnan(P))
                ME = MException('BallValve:PNan','P is NaN for given mass flow (Can take any value?)');
                throw(ME);
@@ -52,7 +61,15 @@ classdef BallValve < FlowCoeffFlowRestriction
                h1 = SaturatedNitrous.getSpecificEnthalpy(XUpstream,TUpstream,PUpstream); 
                isSaturated = true;
             else
-               h1 = fluidType.getSpecificEnthalpy(TUpstream,PUpstream); 
+               if(fluidType == FluidType.NITROUS_GENERAL)
+                  if(XUpstream == 1)
+                      h1 = FluidType.NITROUS_GAS.getSpecificEnthalpy(TUpstream,PUpstream); 
+                  elseif(XUpstream == 0)
+                      h1 = FluidType.NITROUS_LIQUID.getSpecificEnthalpy(TUpstream,PUpstream); 
+                  end
+               else
+                    h1 = fluidType.getSpecificEnthalpy(TUpstream,PUpstream); 
+               end
                PVap = fluidType.getVapourPressure(TUpstream);
                if(abs((PVap - PUpstream)/PUpstream) < 0.01)
                    %Only support nitrous as a saturated fluid
