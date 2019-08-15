@@ -348,6 +348,10 @@ classdef GeometricNitrousAndAirTank < matlab.mixin.Copyable%handle %Handle class
             end
         end
         
+        function forceSetNitrousMass(obj,mNitrous)
+            obj.mTotalNitrous = mNitrous;
+        end
+        
         %Change the nitrous in the tank's mass and energy. Positive for
         %energy/mass input, and negative for energy/mass output. EIn is not
         %specific, but should take into account mass and type of each mass

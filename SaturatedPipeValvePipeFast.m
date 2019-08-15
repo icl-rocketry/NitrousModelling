@@ -1,4 +1,4 @@
-classdef SaturatedPipeValvePipeFast
+classdef SaturatedPipeValvePipeFast < matlab.mixin.Copyable
     properties
         data; %The pre baked data
     end
