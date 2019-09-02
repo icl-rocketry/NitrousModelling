@@ -49,6 +49,15 @@ classdef FillingSystem  < matlab.mixin.Copyable
                mFluid);
        end
        
+       function xDot = getSystemChangeRateVector(obj)
+            x1 = obj.getStateVector();
+            obj2 = copy(obj);
+            dt = 0.01;
+            obj2.advanceSystemBySmallTimeIncrem(dt);
+            x2 = obj2.getStateVector();
+            xDot = (x2-x1)./dt;
+       end
+       
        function advanceSystemBySmallTimeIncrem(obj,dt)
             mdotFill = obj.pipeBetweenTanks.getMassFlow(obj.externalTank.vapourPressure,obj.internalTank.vapourPressure,obj.fillValveOpenAmt);
             mdotVent = obj.ventPipe.getMassFlow(obj.internalTank.vapourPressure,FillingSystem.ATM_PRESSURE,obj.ventValveOpenAmt);
