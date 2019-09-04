@@ -13,8 +13,13 @@ uBefore = tank.getInternalEnergy()/tank.mTotalNitrous;
 tank.drainSmallAmountOfLiquid(mOut);
 % Q = mOut * NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.LIQUID,FluidProperty.SPECIFIC_INTERNAL_ENERGY,FluidProperty.TEMPERATURE,tank.temp,FluidProperty.PRESSURE,tank.getPressureAtHeight(0));
 % disp("Estimated Q: "+Q);
+dT = tank.temp - T1;
+disp("dT: "+dT);
 Q = tank.findHeatToMakeTemp(T1);
 disp("Estimated Q: "+Q);
 disp("Tank temp: "+tank.temp);
 tank.addHeat(Q);
 disp("Tank temp: "+tank.temp);
+
+dEdt = tank.findIntEnergyChangeRateForConstTemperatureWithFillRate(mOut);
+disp("dEdt: "+dEdt);

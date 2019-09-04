@@ -353,18 +353,38 @@ classdef GeometricNitrousAndAirTank < matlab.mixin.Copyable%handle %Handle class
             obj.mTotalNitrous = mNitrous;
         end
         
-        function Q = findHeatToMakeTemp(obj,tempDesired)
-            c = NitrousFluid.getSaturatedHeatCapacity(obj.temp);
-            QEstimate = obj.mTotalNitrous * c * (tempDesired-obj.temp);
-            uncert = abs(0.3*QEstimate); %Assume +-30% of estimate
-            Q = real(betterfzero(@findErrQ,QEstimate,QEstimate-uncert,QEstimate+uncert));
-            
-            function errQ = findErrQ(Q)
-                clone = copy(obj);
-                clone.addHeat(real(Q));
-                errQ = tempDesired - clone.temp;
-            end
+        %Calculate the rate of change of total internal energy (not specific) of the tank
+        %required for the tank to stay at constant temperature for a mass
+        %only pertubation of netMdotFill per second (Eg. if after 1 second
+        %the total mass of nitrous in the tank has increased by
+        %netMdotFill Kg, what will the tank's internal energy have to have
+        %changed by to still have the tank at the same temp)
+        function dEdt = findIntEnergyChangeRateForConstTemperatureWithFillRate(obj,netMdotFill)
+            clone = copy(obj);
+            dt = 1e-3; %1 millis
+            clone.mTotalNitrous = obj.mTotalNitrous + netMdotFill.*dt; %Perturb mass only
+            dE = clone.getInternalEnergy() - obj.getInternalEnergy(); %Change in tank internal energy
+            dEdt = dE./dt;
         end
+        
+        function Q = findHeatToMakeTemp(obj,tempDesired)
+            clone = copy(obj);
+            clone.temp = tempDesired;
+            Q = clone.getInternalEnergy() - obj.getInternalEnergy();
+        end
+%         
+%         function Q = findHeatToMakeTemp(obj,tempDesired)
+%             c = NitrousFluid.getSaturatedHeatCapacity(obj.temp);
+%             QEstimate = obj.mTotalNitrous * c * (tempDesired-obj.temp);
+%             uncert = abs(0.3*QEstimate); %Assume +-30% of estimate
+%             Q = real(betterfzero(@findErrQ,QEstimate,QEstimate-uncert,QEstimate+uncert));
+%             
+%             function errQ = findErrQ(Q)
+%                 clone = copy(obj);
+%                 clone.addHeat(real(Q));
+%                 errQ = tempDesired - clone.temp;
+%             end
+%         end
         
         %Change the nitrous in the tank's mass and energy. Positive for
         %energy/mass input, and negative for energy/mass output. EIn is not
