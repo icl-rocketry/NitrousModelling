@@ -28,7 +28,10 @@ disp("Current tank mLiquid: "+tank.mLiquid);
 %by iteratively solving for small mass changes dm that sum up to this total
 %amount, so entering a large amount (Such as 4Kg) means it may take a few seconds to
 %compute whereas a tiny amount will be very fast.
-tank.drainAmountOfLiquid(4); %4Kg
+Q = 0.1*NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.LIQUID,FluidProperty.SPECIFIC_INTERNAL_ENERGY,FluidProperty.TEMPERATURE,tank.temp,FluidProperty.PRESSURE,tank.pressure);
+tank.drainAmountOfLiquid(0.1); %0.1Kg
+disp("Est required Q="+Q);
+
 %Values of tank pressure, temperature, liquid mass, etc... will now have changed.
 %Let's show the user the remaining liquid mass and it's temperature
 disp("Remaining liquid mass: "+tank.mLiquid+"Kg");

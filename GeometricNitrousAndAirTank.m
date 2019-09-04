@@ -335,7 +335,7 @@ classdef GeometricNitrousAndAirTank < matlab.mixin.Copyable%handle %Handle class
             
             %Solve for temp that gives final mVapour and mLiquid with
             %correct internal energy
-            solution = betterfzero(@errFunc,obj.temp,200,SaturatedNitrous.T_CRIT-2);
+            solution = betterfzero(@errFunc,obj.temp,200,SaturatedNitrous.T_CRIT-1,2);
             T2 = real(solution(1));
             obj.temp = T2;
             obj.updateVolNitrous(); %Corrects volume of nitrous vs air (and changes temp if needed) in an energy conserving manner
@@ -343,6 +343,7 @@ classdef GeometricNitrousAndAirTank < matlab.mixin.Copyable%handle %Handle class
             function err = errFunc(endTemp)
                 endTemp = real(endTemp);
                 obj.temp = endTemp; %Changes masses of vapour and liquid within CV
+                
                 E2 = obj.getInternalEnergy();
                 err = E2 - ECv2;
             end
@@ -350,6 +351,19 @@ classdef GeometricNitrousAndAirTank < matlab.mixin.Copyable%handle %Handle class
         
         function forceSetNitrousMass(obj,mNitrous)
             obj.mTotalNitrous = mNitrous;
+        end
+        
+        function Q = findHeatToMakeTemp(obj,tempDesired)
+            c = NitrousFluid.getSaturatedHeatCapacity(obj.temp);
+            QEstimate = obj.mTotalNitrous * c * (tempDesired-obj.temp);
+            uncert = abs(0.3*QEstimate); %Assume +-30% of estimate
+            Q = real(betterfzero(@findErrQ,QEstimate,QEstimate-uncert,QEstimate+uncert));
+            
+            function errQ = findErrQ(Q)
+                clone = copy(obj);
+                clone.addHeat(real(Q));
+                errQ = tempDesired - clone.temp;
+            end
         end
         
         %Change the nitrous in the tank's mass and energy. Positive for
@@ -362,15 +376,15 @@ classdef GeometricNitrousAndAirTank < matlab.mixin.Copyable%handle %Handle class
             ECv1 = obj.getInternalEnergy();
             %disp("E Before: "+ECv1);
             ECv2 = ECv1 + EIn; %Internal energy of the tank after
-            %disp("E change: "+EIn);
-            %fprintf(['E1: ',num2str(ECv1),', E2: ',num2str(ECv2),'\n']);
-            %fprintf(['M1: ',num2str(obj.mTotalNitrous),', M2: ',num2str(obj.mTotalNitrous + mIn),'\n']);
+%             disp("E change: "+EIn);
+%             fprintf(['E1: ',num2str(ECv1),', E2: ',num2str(ECv2),'\n']);
+%             fprintf(['M1: ',num2str(obj.mTotalNitrous),', M2: ',num2str(obj.mTotalNitrous + mIn),'\n']);
             
             obj.mTotalNitrous = obj.mTotalNitrous + mIn; %Nitrous mass of tank after
             clone.mTotalNitrous = obj.mTotalNitrous;
             %Solving for in saturated state max T until modelling can do
             %supercritical
-            T2 = betterfzero(@errTemp,obj.temp,200,SaturatedNitrous.T_CRIT-2); %Solve for T that gives correct internal energy
+            T2 = betterfzero(@errTemp,obj.temp,200,SaturatedNitrous.T_CRIT-2,2); %Solve for T that gives correct internal energy
             %Update tank temp and nitrous vol
             obj.temp = real(T2);
             obj.updateVolNitrous();
@@ -380,7 +394,7 @@ classdef GeometricNitrousAndAirTank < matlab.mixin.Copyable%handle %Handle class
                 
                E2 = clone.getInternalEnergy();               
                err = E2 - ECv2;
-               %fprintf(['T: ',num2str(T),', E: ',num2str(E2), ' Err: ',num2str(err),'\n']);
+%                fprintf(['T: ',num2str(T),', E: ',num2str(E2), ' Err: ',num2str(err),'\n']);
             end
         end
         
@@ -394,7 +408,7 @@ classdef GeometricNitrousAndAirTank < matlab.mixin.Copyable%handle %Handle class
             ECv1 = before.getInternalEnergy();
             ECv2 = ECv1 + EIn; %Internal energy of the tank after
             obj.mAir = before.mAir + mIn; %Nitrous mass of tank after
-            T2 = betterfzero(@errTemp,obj.temp,200,380); %Solve for T that gives correct internal energy
+            T2 = betterfzero(@errTemp,obj.temp,200,380,2); %Solve for T that gives correct internal energy
             %Update tank temp and nitrous vol
             obj.temp = real(T2);
             obj.updateVolNitrous();
