@@ -3,6 +3,8 @@
 % temperature and in equilibrium so will transfer heat between them at infinite rate so as to
 % keep it always this way.
 % Depends on SaturatedNitrous.m,NonLinearEquationSolver.m,NitrousFluid.m
+% NOTE THE MODELLING OF AIR WITH THIS MODEL IS BROKEN, DO NOT USE WITH
+% NON-ZERO AIR MASS
 % By Eddie Brown
 
 classdef GeometricNitrousAndAirTank < matlab.mixin.Copyable%handle %Handle class so that passed by reference not value, makes behave sanely

@@ -1,4 +1,10 @@
 clear
 clc
 
-tank = GeometricNitrousAndAirTank(25+273.15,0,
+tank = GeometricNitrousTank(25+273.15,0,1,(0.25*pi*(15e-2)^2),0.8);
+tank
+
+mNitrousAdd = 0.050;
+EOfNitrousAdd = mNitrousAdd * NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.LIQUID,FluidProperty.SPECIFIC_ENTHALPY,FluidProperty.TEMPERATURE,30+273.15,FluidProperty.VAPOR_QUALITY,0);
+tank.addAmountOfNitrous(mNitrousAdd, EOfNitrousAdd);
+tank

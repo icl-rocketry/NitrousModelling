@@ -37,8 +37,8 @@ classdef FillingSystem  < matlab.mixin.Copyable
                heatTransferCoeffExternalTankWithFluid,SHCFluid,externalTankFluidSurfaceArea,...
                externalTankFluidHeatTransferCoeffWithSurroundings,mFluid)
             obj.ambientTemp = ambientTemp;
-            obj.internalTank = GeometricNitrousAndAirTank(ambientTemp,initialInternalNitrousMass,0,internalTankHeight,internalTankCrossSectionA,internalVentHoleHeight); 
-            obj.externalTank = GeometricNitrousAndAirTank(ambientTemp,initialExternalNitrousMass,0,externalTankHeight,externalTankCrossSectionA,externalTankHeight);
+            obj.internalTank = GeometricNitrousTank(ambientTemp,initialInternalNitrousMass,internalTankHeight,internalTankCrossSectionA,internalVentHoleHeight); 
+            obj.externalTank = GeometricNitrousTank(ambientTemp,initialExternalNitrousMass,externalTankHeight,externalTankCrossSectionA,externalTankHeight);
             obj.ventPipe = SaturatedPipeValvePipeFast('preBakedData/saturatedGasPipeValveFlowRates.mat');
             obj.pipeBetweenTanks = SaturatedPipeValvePipeFast('preBakedData/saturatedLiquidPipeValveFlowRates.mat');
             obj.internalTankSurfaceArea = internalTankSurfaceArea;
