@@ -165,6 +165,22 @@ classdef GeometricNitrousTank < matlab.mixin.Copyable%handle %Handle class so th
             dEdt = dE./dt;
         end
         
+        function dEdt = findIntEnergyChangeRateForTempChangeRateWithFillRate(obj,dTdt,netMdotFill)
+            clone = copy(obj);
+            dt = 1e-3;
+            clone.mTotalNitrous = obj.mTotalNitrous + netMdotFill.*dt;
+            clone.temp = clone.temp + dTdt.*dt;
+            dE = clone.getInternalEnergy() - obj.getInternalEnergy();
+            dEdt = dE/dt;
+        end
+        
+        function Q = findHeatRateInputForTempChangeRateWithLiquidDrainingRate(obj,dTdt,mdotLiq)
+            h = FluidType.NITROUS_LIQUID.getSpecificEnthalpy(obj.temp,obj.getPressureAtHeight(0));
+            H = h*mdotLiq; %Energy being lost due to liquid
+            dEdt = obj.findIntEnergyChangeRateForTempChangeRateWithFillRate(dTdt,-mdotLiq);
+            Q = dEdt + H;
+        end
+        
         function Q = findHeatRateInputToKeepTempForDrainingLiquidRate(obj,mdotLiq)
             h = FluidType.NITROUS_LIQUID.getSpecificEnthalpy(obj.temp,obj.getPressureAtHeight(0));
             H = h*mdotLiq; %Energy being lost due to liquid
@@ -204,6 +220,10 @@ classdef GeometricNitrousTank < matlab.mixin.Copyable%handle %Handle class so th
                clone.temp = real(T);
                if(clone.temp < 182.23) %Temp too low
                    err = -1000000;
+                   return;
+               end
+               if(clone.temp > SaturatedNitrous.T_CRIT)
+                   err = 1000000;
                    return;
                end
                E2 = clone.getInternalEnergy();               
@@ -261,17 +281,17 @@ classdef GeometricNitrousTank < matlab.mixin.Copyable%handle %Handle class so th
         end
         
         function P = getPressureAtHeight(obj,h)
+           P = obj.vapourPressure;
            if(~obj.isSaturated())
-              %TODO
-              
+              %Assume calculated P is at half tank height
+              P = P - obj.vapourDensity * GeometricNitrousTank.g * (h-(obj.tankHeight/2));
               return;
            end
-           P = obj.vapourPressure;
            liqHeight = obj.liquidHeight; %Height of nitrous liquid phase
            if h < liqHeight
-              P = P + obj.liquidDensity * GeometricNitrousAndAirTank.g * (liqHeight-h);
+              P = P + obj.liquidDensity * GeometricNitrousTank.g * (liqHeight-h);
            else
-              P = P - obj.vapourDensity * GeometricNitrousAndAirTank.g * (h-liqHeight);
+              P = P - obj.vapourDensity * GeometricNitrousTank.g * (h-liqHeight);
            end
         end
         
@@ -391,11 +411,11 @@ classdef GeometricNitrousTank < matlab.mixin.Copyable%handle %Handle class so th
         function val=get.pressureAtBaseOfTank(obj)
             %P1 = P + rho*g*h
 %             if obj.mTotalNitrous == 0
-%                 val = obj.airPressure + obj.airDensity * GeometricNitrousAndAirTank.g * (obj.airHeight/2);
+%                 val = obj.airPressure + obj.airDensity * GeometricNitrousTank.g * (obj.airHeight/2);
 %                return; 
 %             end
             if(obj.isSaturated())
-                val = obj.vapourPressure + obj.liquidDensity * GeometricNitrousAndAirTank.g * obj.liquidHeight;
+                val = obj.vapourPressure + obj.liquidDensity * GeometricNitrousTank.g * obj.liquidHeight;
             end
             %TODO
         end

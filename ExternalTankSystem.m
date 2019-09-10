@@ -39,6 +39,15 @@ classdef ExternalTankSystem < matlab.mixin.Copyable
            TFluid = obj.externalTank.temp + (Q/(obj.externalTankSurfaceArea .* obj.heatTransferCoeffTankWithFluid));
        end
        
+       function [QExt,QTotalReq] = calcExternalHeatFluxReqForFluidTempChangeRate(obj,TFluidReq,TAmbient,dTFdt)
+           QToTank = obj.externalTankSurfaceArea .* obj.heatTransferCoeffTankWithFluid .* (TFluidReq - obj.externalTank.temp);
+           QAmbient = obj.fluidSurfaceAreaWithSurroundings .* obj.fluidHeatTransferCoeffWithSurroundings .* (TAmbient - TFluidReq);
+           QChangeT = obj.mFluid.*obj.SHCFluid.*(dTFdt); %Q = mc(dT)
+           %QReq = QExt + QAmbient
+           QExt = QToTank - QAmbient + QChangeT;
+           QTotalReq = QToTank + QChangeT;
+       end
+       
        function [QExt,QTotalReq] = calcExternalHeatFluxReqToKeepFluidAtTemp(obj,TFluidReq,TAmbient)
            QReq = obj.externalTankSurfaceArea .* obj.heatTransferCoeffTankWithFluid .* (TFluidReq - obj.externalTank.temp);
            QAmbient = obj.fluidSurfaceAreaWithSurroundings .* obj.fluidHeatTransferCoeffWithSurroundings .* (TAmbient - TFluidReq);

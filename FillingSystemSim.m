@@ -38,17 +38,23 @@ externalTankFluidHeatTransferCoeffWithSurroundings = 0.2/3e-3;
 extFluidVol = externalTankHeight*(0.25*pi*(externalTankDiameter+2e-2)^2-0.25*pi*(externalTankDiameter)^2);
 mFluid = 997*extFluidVol; %Water density of 997 assumed
 
+initialInternalTankTemp = -20+273.15;
+initialExternalTankTemp = -18+273.15;
+
 fillingSystem = FillingSystem(ambientTemp,internalTankHeight,internalTankCrossSectionA...
                ,internalVentHoleHeight,initialInternalNitrousMass,initialExternalNitrousMass,...
                externalTankHeight,externalTankCrossSectionA,internalTankSurfaceArea,...
                heatTransferCoeffInternalTank,externalTankSurfaceArea,...
                heatTransferCoeffExternalTankWithFluid,SHCFluid,externalTankFluidSurfaceArea,...
-               externalTankFluidHeatTransferCoeffWithSurroundings,mFluid);
+               externalTankFluidHeatTransferCoeffWithSurroundings,mFluid,initialInternalTankTemp,...
+               initialExternalTankTemp);
            
 fillingSystem.internalTank.forceSetTemp(-20+273.15);
-fillingSystem.externalTank.forceSetTemp(-18+273.15);
 mdotFillRate = 100e-3;
-[fillValveOpenAmt,ventValveOpenAmt,TFluidExtReq,Q,mdotBetweenTanks,mdotVent,QInclFromEnv] = fillingSystem.findControlEquilibriumPointForFillRate(mdotFillRate);
+internalTempChangeRate = 0;
+externalTempChangeRate = 0;
+externalFluidTempChangeRate = 0;
+[fillValveOpenAmt,ventValveOpenAmt,TFluidExtReq,Q,mdotBetweenTanks,mdotVent,QInclFromEnv] = fillingSystem.findControlPointForConditions(mdotFillRate,internalTempChangeRate,externalTempChangeRate,externalFluidTempChangeRate);
 disp("Heat transfer overall coefficient internal tank with surroundings: "+heatTransferCoeffInternalTank+" W/m^2K");
 disp("Heat transfer overall coefficient external fluid with surroundings: "+externalTankFluidHeatTransferCoeffWithSurroundings+" W/m^2K");
 disp("Heat transfer overall coefficient external tank with fluid: "+heatTransferCoeffExternalTankWithFluid+" W/m^2K");

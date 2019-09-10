@@ -35,10 +35,11 @@ classdef FillingSystem  < matlab.mixin.Copyable
                externalTankHeight,externalTankCrossSectionA,internalTankSurfaceArea,...
                heatTransferCoeffInternalTank,externalTankSurfaceArea,...
                heatTransferCoeffExternalTankWithFluid,SHCFluid,externalTankFluidSurfaceArea,...
-               externalTankFluidHeatTransferCoeffWithSurroundings,mFluid)
+               externalTankFluidHeatTransferCoeffWithSurroundings,mFluid,initialInternalTankTemp,...
+               initialExternalTankTemp)
             obj.ambientTemp = ambientTemp;
-            obj.internalTank = GeometricNitrousTank(ambientTemp,initialInternalNitrousMass,internalTankHeight,internalTankCrossSectionA,internalVentHoleHeight); 
-            obj.externalTank = GeometricNitrousTank(ambientTemp,initialExternalNitrousMass,externalTankHeight,externalTankCrossSectionA,externalTankHeight);
+            obj.internalTank = GeometricNitrousTank(initialInternalTankTemp,initialInternalNitrousMass,internalTankHeight,internalTankCrossSectionA,internalVentHoleHeight); 
+            obj.externalTank = GeometricNitrousTank(initialExternalTankTemp,initialExternalNitrousMass,externalTankHeight,externalTankCrossSectionA,externalTankHeight);
             obj.ventPipe = SaturatedPipeValvePipeFast('preBakedData/saturatedGasPipeValveFlowRates.mat');
             obj.pipeBetweenTanks = SaturatedPipeValvePipeFast('preBakedData/saturatedLiquidPipeValveFlowRates.mat');
             obj.internalTankSurfaceArea = internalTankSurfaceArea;
@@ -47,6 +48,30 @@ classdef FillingSystem  < matlab.mixin.Copyable
                 heatTransferCoeffExternalTankWithFluid,ambientTemp, SHCFluid, ...
                externalTankFluidSurfaceArea,externalTankFluidHeatTransferCoeffWithSurroundings,...
                mFluid);
+       end
+       
+       function [fillValveOpenAmt,ventValveOpenAmt,TFluidExtReq,Q,mdotBetweenTanks,mdotVent,QInclFromEnv] = findControlPointForConditions(obj,mdotFillRate,internalTempChangeRate,externalTempChangeRate,externalFluidTempChangeRate)
+           [mdotBetweenTanks,mdotVent,TFluidExtReq,Q,QInclFromEnv] = obj.findPointForConditions(mdotFillRate,internalTempChangeRate,externalTempChangeRate,externalFluidTempChangeRate);
+           try
+               fillValveOpenAmt = betterfzero(@getMDotBetweenTanksErr,0.5,0,1,1e-7,1000,0.5*10^-16,true);
+           catch excep
+               disp("Error finding fill valve open amt for mass flow "+mdotBetweenTanks);
+               rethrow excep;
+           end
+           try
+               ventValveOpenAmt = betterfzero(@getMDotVentErr,0.5,0,1,1e-7,1000,0.5*10^-16,true);
+           catch excep
+               disp("Error finding vent valve open amt for mass flow "+mdotVent);
+               rethrow excep;
+           end
+           
+           function mdotBetweenTanksErr = getMDotBetweenTanksErr(fillValveOpenAmt)
+               mdotBetweenTanksErr = mdotBetweenTanks - obj.getFlowBetweenTanksIfFillValveOpenAmtWasThis(fillValveOpenAmt);
+           end
+           
+           function mdotVentErr = getMDotVentErr(ventValveOpenAmt)
+               mdotVentErr = mdotVent - obj.getFlowOutIfVentValveOpenAmtWasThis(ventValveOpenAmt);
+           end
        end
        
        function [fillValveOpenAmt,ventValveOpenAmt,TFluidExtReq,Q,mdotBetweenTanks,mdotVent,QInclFromEnv] = findControlEquilibriumPointForFillRate(obj,mdotFillRate)
@@ -80,6 +105,15 @@ classdef FillingSystem  < matlab.mixin.Copyable
            end
        end
        
+       function [mdotBetweenTanks,mdotVent,TFluidExtReq,Q,QIncludingFromEnv] = findPointForConditions(obj,mdotFillRate,internalTempChangeRate,externalTempChangeRate,externalFluidTempChangeRate)
+           mdotVent = obj.calcMDotOutThisInternalTankReqInclTempChangeRate(mdotFillRate,internalTempChangeRate);
+           mdotBetweenTanks = mdotVent + mdotFillRate;
+           %Calculate Q
+           QTankReq = obj.externalTankSystem.externalTank.findHeatRateInputForTempChangeRateWithLiquidDrainingRate(externalTempChangeRate,mdotFillRate);
+           TFluidExtReq = obj.externalTankSystem.calcFluidTempRequiredForHeatFluxToTank(QTankReq);
+           [Q,QIncludingFromEnv] = obj.externalTankSystem.calcExternalHeatFluxReqForFluidTempChangeRate(TFluidExtReq,obj.ambientTemp,externalFluidTempChangeRate);
+       end
+       
        function [mdotBetweenTanks,mdotVent,TFluidExtReq,Q,QIncludingFromEnv] = findEquilibriumPointForFillRate(obj,mdotFillRate)
            mdotVent = obj.calcMDotOutThisInternalTankReq(mdotFillRate);
            mdotBetweenTanks = mdotVent + mdotFillRate;
@@ -94,10 +128,22 @@ classdef FillingSystem  < matlab.mixin.Copyable
             mdotOut = obj.calcMDotOutInternalTankReq(heatTrans,mdotFillRate,obj.internalTank,obj.externalTankSystem.externalTank.temp);
        end
        
+       function mdotOut = calcMDotOutThisInternalTankReqInclTempChangeRate(obj,mdotFillRate,internalTankTemperatureChangeRate)
+            heatTrans = obj.calcCurrentHeatTransferRateAmbientToInternalTank();
+            mdotOut = obj.calcMDotOutInternalTankReqInclTempChangeRate(heatTrans,mdotFillRate,obj.internalTank,obj.externalTankSystem.externalTank.temp,internalTankTemperatureChangeRate);
+       end
+       
        function mdotOut = calcMDotOutInternalTankReq(obj,HeatTransferIntoTank,mdotFillRate,tank,extTankT)
            hFromExt = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.LIQUID,FluidProperty.SPECIFIC_ENTHALPY,FluidProperty.TEMPERATURE,extTankT,FluidProperty.VAPOR_QUALITY,0);
            hInt = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.GAS,FluidProperty.SPECIFIC_ENTHALPY,FluidProperty.TEMPERATURE,tank.temp,FluidProperty.VAPOR_QUALITY,1);
            dEdt = tank.findIntEnergyChangeRateForConstTemperatureWithFillRate(mdotFillRate);
+           mdotOut = (HeatTransferIntoTank - dEdt + mdotFillRate.*hFromExt)/(hInt - hFromExt);
+       end
+       
+       function mdotOut = calcMDotOutInternalTankReqInclTempChangeRate(obj,HeatTransferIntoTank,mdotFillRate,tank,extTankT,internalTankTemperatureChangeRate)
+           hFromExt = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.LIQUID,FluidProperty.SPECIFIC_ENTHALPY,FluidProperty.TEMPERATURE,extTankT,FluidProperty.VAPOR_QUALITY,0);
+           hInt = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.GAS,FluidProperty.SPECIFIC_ENTHALPY,FluidProperty.TEMPERATURE,tank.temp,FluidProperty.VAPOR_QUALITY,1);
+           dEdt = tank.findIntEnergyChangeRateForTempChangeRateWithFillRate(internalTankTemperatureChangeRate,mdotFillRate);
            mdotOut = (HeatTransferIntoTank - dEdt + mdotFillRate.*hFromExt)/(hInt - hFromExt);
        end
        
