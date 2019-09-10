@@ -74,12 +74,17 @@ classdef PipeValvePipe < FlowRestriction
                    P2 = PUpstream; 
                 end
                 [T2,mdot,X2,vDownstream2] = obj.pipe1.getDownstreamTemperatureMassFlowFromPressureChange(P2-PUpstream,fluidType,TUpstream,PUpstream,XUpstream,vUpstream);
-%                 disp("mdotcalc: "+mdot+" P1: "+PUpstream+" P2: "+P2);
+%                 disp("  X2: "+X2);
+%                 disp("  T2: "+T2);
+%                 disp("  P2: "+P2);
+%                 disp("  mdot: "+mdot);
+%                 drawnow;
                 try
                     [T3,P3,X3,vDownstream3] = obj.valve.getDownstreamTemperaturePressureFromMassFlow(mdot,fluidType,T2,P2,X2,vDownstream2);
 %                     disp("P2: "+P2+" mdot: "+mdot+" P3: "+P3);
                 catch ME
-%                     disp("Exception occured for mdot of: "+mdot +" ("+ME.identifier+"), P2: "+P2);
+                     %disp("Exception occured for mdot of: "+mdot +" ("+ME.identifier+"), P2: "+P2);
+                     drawnow;
                     if(strcmp(ME.identifier,'BallValve:DownstreamPTooLow'))
                         P3 = PFinal;
                         T = T2;
@@ -144,7 +149,8 @@ classdef PipeValvePipe < FlowRestriction
                     end
                 end
                 err = (mdot-mdot2);
-%                 disp("mdot: "+mdot+" mdot2: "+mdot2+" err: "+err);
+%                  disp("mdot: "+mdot+" mdot2: "+mdot2+" err: "+err);
+%                  drawnow;
             end
         end
         

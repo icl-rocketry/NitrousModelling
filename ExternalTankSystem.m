@@ -1,6 +1,6 @@
 %Represents the external tank submerged in a fluid whose temperature is
 %being regulated by heat input/extraction
-classdef ExternalTankSystem < Copyable
+classdef ExternalTankSystem < matlab.mixin.Copyable
    properties
        externalTank;
        externalTankSurfaceArea;
@@ -35,6 +35,18 @@ classdef ExternalTankSystem < Copyable
           obj.mFluid = mFluid;
        end
        
+       function TFluid = calcFluidTempRequiredForHeatFluxToTank(obj,Q)
+           TFluid = obj.externalTank.temp + (Q/(obj.externalTankSurfaceArea .* obj.heatTransferCoeffTankWithFluid));
+       end
+       
+       function [QExt,QTotalReq] = calcExternalHeatFluxReqToKeepFluidAtTemp(obj,TFluidReq,TAmbient)
+           QReq = obj.externalTankSurfaceArea .* obj.heatTransferCoeffTankWithFluid .* (TFluidReq - obj.externalTank.temp);
+           QAmbient = obj.fluidSurfaceAreaWithSurroundings .* obj.fluidHeatTransferCoeffWithSurroundings .* (TAmbient - TFluidReq);
+           %QReq = QExt + QAmbient
+           QExt = QReq - QAmbient;
+           QTotalReq = QReq;
+       end
+       
        %Note Q is energy (J) not power (J/s) here
        function applyHeatToFluid(obj,Q)
           dT = Q./(obj.mFluid.*obj.SHCFluid); %Q = mc(Dt)
@@ -48,6 +60,7 @@ classdef ExternalTankSystem < Copyable
            obj.applyHeatToFluid(Q1+Q2);
            QTank = dt .* obj.externalTankSurfaceArea .* obj.heatTransferCoeffTankWithFluid .* (obj.TFluid - obj.externalTank.temp);
            obj.externalTank.addHeat(QTank);
+           obj.applyHeatToFluid(-QTank);
        end
    end
 end

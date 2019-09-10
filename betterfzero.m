@@ -10,9 +10,12 @@
 % is what was required)
 %
 % By Eddie Brown
-function [x] = betterfzero(func,x0,minX,maxX,convergenceTolerance,MAX_ITERS,mindx)
+function [x] = betterfzero(func,x0,minX,maxX,convergenceTolerance,MAX_ITERS,mindx,forceBracketing)
     if ~exist('convergenceTolerance','var')
         convergenceTolerance = 1*10^-7;
+    end
+    if ~exist('forceBracketing','var')
+        forceBracketing = false;
     end
     if ~exist('MAX_ITERS','var')
         MAX_ITERS = 1000;
@@ -28,6 +31,10 @@ function [x] = betterfzero(func,x0,minX,maxX,convergenceTolerance,MAX_ITERS,mind
     yMax = func(maxX);
     bracketing = true;
     if (yMin > 0 && yMax > 0) || (yMax < 0 && yMin < 0)
+        if(forceBracketing)
+            error('No change of sign within brackets and bracketing was forced!');
+           %return; 
+        end
         bracketing = false; %No sign change, cannot use bracketing
         x = fzero(func,x0); %Call to fzero instead
         return;

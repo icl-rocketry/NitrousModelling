@@ -50,7 +50,8 @@ classdef SystemVisualization < matlab.mixin.Copyable
             obj.drawText(5,76,50,['m_e = ',num2str(x(3)),' Kg']);
             obj.drawText(6,21,60,['T_i = ',num2str(x(4)-273.15),' C']);
             obj.drawText(7,21,50,['m_i = ',num2str(x(5)),' Kg']);
-            obj.drawText(8,80,85,['Q = ',num2str(u(3)),' W']);
+            obj.drawText(8,101,70,['Q = ',num2str(u(3)),' W']);
+            obj.drawText(9,101,50,['T_f = ',num2str(x(6)-273.15),' C']);
             
             title(obj.axis,['t = ',num2str(t),' s']);
         end

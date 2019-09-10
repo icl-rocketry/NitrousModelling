@@ -1,12 +1,12 @@
 clear
 clc
 %For gas on saturation line
-filename = 'preBakedData/saturatedLiquidPipeValveFlowRates.mat';
+filename = 'preBakedData/saturatedGasPipeValveFlowRatesSmallerValve.mat';
 %Gas one calculated with internal diameter of 4.8mm
 %Liquid one calculated with internal diamater of 10.2108mm
-pipeInternalDiameter = 10.2108e-3;
-valveFullyOpenFlowCoefficient = 12;
-upstreamQuality = 0;
+pipeInternalDiameter = 4.8e-3;
+valveFullyOpenFlowCoefficient = 0.2; %12 for 1/4in and 0.2 for 1/8in
+upstreamQuality = 1; %1 is vapour, 0 is liquid
 
 pipe1 = FluidPipe(0.25*pi*(pipeInternalDiameter).^2,1);
 valveOpenAmt = 0:0.025:1;
@@ -28,7 +28,7 @@ for i=1:length(pressures)
         dataNotMap{3,j} = {};
     end
 end
-%load('preBakedData/dataNotMapPartial.mat','dataNotMap');
+load('preBakedData/dataNotMapPartial.mat','dataNotMap');
 dataCopy = dataNotMap;
 data = containers.Map('KeyType','char','ValueType','any');
 

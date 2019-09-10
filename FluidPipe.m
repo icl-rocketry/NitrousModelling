@@ -22,7 +22,8 @@ classdef FluidPipe < FlowRestriction
             end
             [X,T,v,~,G] = SaturatedNitrous.getDownstreamSaturatedNHNEFlowCond(XUpstream,TUpstream,PUpstream,PUpstream+dP,vUpstream,obj.pipeLength);
             %&& (X >= 0.9 || X <= 0.1) 
-            if(abs(dP) < 1000 && dP < 0) %can behave badly with dP < 1K due to resolution of fluid data
+%             disp("Sat T found to be: "+T+" for P= "+(PUpstream+dP));
+            if(abs(dP) < 1000 && dP <= 0) %can behave badly with dP < 1K due to resolution of fluid data
                 %Values for dP of -1000Pa
                 [Xtest,Ttest,vtest,~,Gtest] = SaturatedNitrous.getDownstreamSaturatedNHNEFlowCond(XUpstream,TUpstream,PUpstream,PUpstream-1000,vUpstream,obj.pipeLength);
                 %Mass flow scales linearly with sqrt dP approximately

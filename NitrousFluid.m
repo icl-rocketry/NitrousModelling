@@ -631,7 +631,11 @@ classdef NitrousFluid
         end
         
         function val = getTemperatureForPressureEnthalpy(P,h)
-            val = NitrousFluidCoolProp.getProperty(FluidProperty.TEMPERATURE,FluidProperty.PRESSURE,P,FluidProperty.SPECIFIC_ENTHALPY,h);
+            try
+                val = NitrousFluidCoolProp.getProperty(FluidProperty.TEMPERATURE,FluidProperty.PRESSURE,P,FluidProperty.SPECIFIC_ENTHALPY,h);
+            catch
+                val = NitrousFluidCoolProp.getProperty(FluidProperty.TEMPERATURE,FluidProperty.PRESSURE,P,FluidProperty.SPECIFIC_ENTHALPY,h+2);
+            end
         end
         
         %Function to get the temperature (K) of the gas for a given specific

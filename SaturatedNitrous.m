@@ -148,10 +148,23 @@ classdef SaturatedNitrous
             
             if ~exist('ignoreTemp','var') || ~ignoreTempAndQuality
                 T2 = SaturatedNitrous.getSaturationTemperature(P2);
-                X2 = NitrousFluidCoolProp.getProperty(FluidProperty.VAPOR_QUALITY,FluidProperty.PRESSURE,P2,FluidProperty.SPECIFIC_ENTHALPY,h2);
+%                 if(h2 < 399380.7881)
+%                     disp("h2 uncorrected was: "+h2);
+%                     h2 = 399380.7881+2;
+%                 end
+                try
+                    X2 = NitrousFluidCoolProp.getProperty(FluidProperty.VAPOR_QUALITY,FluidProperty.PRESSURE,P2,FluidProperty.SPECIFIC_ENTHALPY,h2);
+                catch
+                    X2 = NitrousFluidCoolProp.getProperty(FluidProperty.VAPOR_QUALITY,FluidProperty.PRESSURE,P2,FluidProperty.SPECIFIC_ENTHALPY,h2+2);
+                end
+                
                 if(X2 == -1) %Answer is not on saturation line
                     TSat = T2;
-                    T2 = NitrousFluidCoolProp.getProperty(FluidProperty.TEMPERATURE,FluidProperty.PRESSURE,P2,FluidProperty.SPECIFIC_ENTHALPY,h2);
+                    try
+                        T2 = NitrousFluidCoolProp.getProperty(FluidProperty.TEMPERATURE,FluidProperty.PRESSURE,P2,FluidProperty.SPECIFIC_ENTHALPY,h2);
+                    catch
+                        T2 = NitrousFluidCoolProp.getProperty(FluidProperty.TEMPERATURE,FluidProperty.PRESSURE,P2,FluidProperty.SPECIFIC_ENTHALPY,h2+2);
+                    end
                     if(T2 <= TSat)
                         X2 = 0; %Liquid
                     else
@@ -246,7 +259,13 @@ classdef SaturatedNitrous
                 %approxdP = (1/dDdP) * distFromSaturationLine(P1);
                 %PToDropToForSaturationLine = P1+approxdP;
                 errSatT = @(T) s1 - SaturatedNitrous.getSaturationSpecificEntropy(1,real(T));
-                TSat = real(betterfzero(errSatT,T1,183,SaturatedNitrous.T_CRIT,1e-3));
+                try
+                    TSat = real(betterfzero(errSatT,T1,183,SaturatedNitrous.T_CRIT,1e-3));
+                catch err
+                    %Search failed, assume TSat is 183K. Eg. probably never
+                    %going to reach it
+                    TSat = 183;
+                end
                 PToDropToForSaturationLine = SaturatedNitrous.getVapourPressure(TSat);
 %                 PToDropToForSaturationLine = NitrousFluidCoolProp.getProperty(FluidProperty.TEMPERATURE,'Smass|twophase',s1,FluidProperty.VAPOR_QUALITY,1);
               %   disp("Saturation P: "+PToDropToForSaturationLine);
@@ -281,6 +300,7 @@ classdef SaturatedNitrous
             %Weighting of flow properties as in Dyer
             X2 = incompressibleCoeff * X2Inc + hemCoeff * X2Hem;
             T2 = incompressibleCoeff * T2Inc + hemCoeff * T2Hem;
+            %disp("x2: "+X2+" T2: "+T2+" hem X2: "+X2Hem+" inc X2: "+X2Inc+" T2Hem: "+T2Hem+" T2Inc: "+T2Inc);
             v2 = incompressibleCoeff * v2Inc + hemCoeff * v2Hem;
             h2 = incompressibleCoeff * h2Inc + hemCoeff * h2Hem;
             G = incompressibleCoeff * GInc + hemCoeff * GHem;
@@ -392,7 +412,10 @@ classdef SaturatedNitrous
                    else
                        X2 = 1; %Gas
                    end
+                elseif(X2 >1 && X2<1.000001)
+                    X2 = 1; %Gas 
                 else
+                    disp("INVALID X2 of "+X2);
                     error('INVALID x2 encountered'); 
                 end
 %                 disp("X2: "+X2);

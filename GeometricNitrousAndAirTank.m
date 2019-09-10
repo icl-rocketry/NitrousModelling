@@ -367,6 +367,13 @@ classdef GeometricNitrousAndAirTank < matlab.mixin.Copyable%handle %Handle class
             dEdt = dE./dt;
         end
         
+        function Q = findHeatRateInputToKeepTempForDrainingLiquidRate(obj,mdotLiq)
+            h = FluidType.NITROUS_LIQUID.getSpecificEnthalpy(obj.temp,obj.getPressureAtHeight(0));
+            H = h*mdotLiq; %Energy being lost due to liquid
+            dEdt = obj.findIntEnergyChangeRateForConstTemperatureWithFillRate(-mdotLiq); %dEdt to keep temp same
+            Q = dEdt + H;
+        end
+        
         function Q = findHeatToMakeTemp(obj,tempDesired)
             clone = copy(obj);
             clone.temp = tempDesired;
