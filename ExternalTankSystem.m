@@ -63,12 +63,19 @@ classdef ExternalTankSystem < matlab.mixin.Copyable
        end
        
        %Note Q is power (J/s) not energy (J) here
-       function doHeatTransferForTimeStep(obj,dt,TAmbient,QInputToFluid)
+       function [QTankToApply] = doHeatTransferForTimeStep(obj,dt,TAmbient,QInputToFluid)
+%            disp("Temp tank start: "+(obj.externalTank.temp-273.15));
+%            disp("Temp fluid start: "+(obj.TFluid-273.15));
            Q1 = dt .* obj.fluidSurfaceAreaWithSurroundings .* obj.fluidHeatTransferCoeffWithSurroundings .* (TAmbient - obj.TFluid);
+%            disp("Q from env to fluid: "+ Q1);
            Q2 = dt .* QInputToFluid;
+%            disp("Q ext to fluid: "+Q2);
            obj.applyHeatToFluid(Q1+Q2);
            QTank = dt .* obj.externalTankSurfaceArea .* obj.heatTransferCoeffTankWithFluid .* (obj.TFluid - obj.externalTank.temp);
-           obj.externalTank.addHeat(QTank);
+%            disp("Q from fluid to tank: "+QTank);
+           QTankToApply = QTank;
+           %obj.externalTank.addHeat(QTank);
+%            disp("Temp tank after: "+(obj.externalTank.temp-273.15));
            obj.applyHeatToFluid(-QTank);
        end
    end

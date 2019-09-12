@@ -27,6 +27,7 @@ classdef FillingSystem  < matlab.mixin.Copyable
            cpObj.pipeBetweenTanks = copy(obj.pipeBetweenTanks);
            cpObj.ventPipe = copy(obj.ventPipe);
            cpObj.externalTankSystem = copy(obj.externalTankSystem);
+           cpObj.externalTankSystem.externalTank = cpObj.externalTank;
        end
    end
    methods
@@ -36,7 +37,7 @@ classdef FillingSystem  < matlab.mixin.Copyable
                heatTransferCoeffInternalTank,externalTankSurfaceArea,...
                heatTransferCoeffExternalTankWithFluid,SHCFluid,externalTankFluidSurfaceArea,...
                externalTankFluidHeatTransferCoeffWithSurroundings,mFluid,initialInternalTankTemp,...
-               initialExternalTankTemp)
+               initialExternalTankTemp,initialExtFluidTemp)
             obj.ambientTemp = ambientTemp;
             obj.internalTank = GeometricNitrousTank(initialInternalTankTemp,initialInternalNitrousMass,internalTankHeight,internalTankCrossSectionA,internalVentHoleHeight); 
             obj.externalTank = GeometricNitrousTank(initialExternalTankTemp,initialExternalNitrousMass,externalTankHeight,externalTankCrossSectionA,externalTankHeight);
@@ -45,33 +46,71 @@ classdef FillingSystem  < matlab.mixin.Copyable
             obj.internalTankSurfaceArea = internalTankSurfaceArea;
             obj.heatTransferCoeffInternalTank = heatTransferCoeffInternalTank;
             obj.externalTankSystem = ExternalTankSystem(obj.externalTank,externalTankSurfaceArea,...
-                heatTransferCoeffExternalTankWithFluid,ambientTemp, SHCFluid, ...
+                heatTransferCoeffExternalTankWithFluid,initialExtFluidTemp, SHCFluid, ...
                externalTankFluidSurfaceArea,externalTankFluidHeatTransferCoeffWithSurroundings,...
                mFluid);
        end
        
-       function [fillValveOpenAmt,ventValveOpenAmt,TFluidExtReq,Q,mdotBetweenTanks,mdotVent,QInclFromEnv] = findControlPointForConditions(obj,mdotFillRate,internalTempChangeRate,externalTempChangeRate,externalFluidTempChangeRate)
-           [mdotBetweenTanks,mdotVent,TFluidExtReq,Q,QInclFromEnv] = obj.findPointForConditions(mdotFillRate,internalTempChangeRate,externalTempChangeRate,externalFluidTempChangeRate);
+       function fillValveOpenAmt = findFillValvePositionForFlow(obj,mdotBetweenTanks)
            try
                fillValveOpenAmt = betterfzero(@getMDotBetweenTanksErr,0.5,0,1,1e-7,1000,0.5*10^-16,true);
            catch excep
                disp("Error finding fill valve open amt for mass flow "+mdotBetweenTanks);
                rethrow excep;
            end
-           try
-               ventValveOpenAmt = betterfzero(@getMDotVentErr,0.5,0,1,1e-7,1000,0.5*10^-16,true);
-           catch excep
-               disp("Error finding vent valve open amt for mass flow "+mdotVent);
-               rethrow excep;
-           end
-           
            function mdotBetweenTanksErr = getMDotBetweenTanksErr(fillValveOpenAmt)
                mdotBetweenTanksErr = mdotBetweenTanks - obj.getFlowBetweenTanksIfFillValveOpenAmtWasThis(fillValveOpenAmt);
            end
-           
+       end
+       
+       function ventValveOpenAmt = findVentValvePositionForFlow(obj,mdotVent)
+           try
+               ventValveOpenAmt = betterfzero(@getMDotVentErr,0.5,0,1,1e-7,1000,0.5*10^-16,true);
+           catch except
+               disp("Error finding vent valve open amt for mass flow "+mdotVent);
+               disp(except);
+               rethrow except;
+           end
            function mdotVentErr = getMDotVentErr(ventValveOpenAmt)
                mdotVentErr = mdotVent - obj.getFlowOutIfVentValveOpenAmtWasThis(ventValveOpenAmt);
            end
+       end
+       
+       function [fillValveOpenAmt,dTintdt,TFluidExtReq,Q,QInclFromEnv] = calcFillingPointNoVentExternalTankEquilibrium(obj,mdotBetweenTanks)
+           fillValveOpenAmt = obj.findFillValvePositionForFlow(mdotBetweenTanks);
+           %Calculate Q
+           QTankReq = obj.externalTankSystem.externalTank.findHeatRateInputForTempChangeRateWithLiquidDrainingRate(0,mdotBetweenTanks);
+           TFluidExtReq = obj.externalTankSystem.calcFluidTempRequiredForHeatFluxToTank(QTankReq);
+           [Q,QInclFromEnv] = obj.externalTankSystem.calcExternalHeatFluxReqForFluidTempChangeRate(TFluidExtReq,obj.ambientTemp,0);
+           systemCopy = copy(obj);
+           systemCopy.fillValveOpenAmt = fillValveOpenAmt;
+           systemCopy.ventValveOpenAmt = 0;
+           systemCopy.QExt = Q;
+           systemCopy.externalTankSystem.TFluid = TFluidExtReq;
+           xdot = systemCopy.getSystemChangeRateVector();
+           dTintdt = xdot(4);
+       end
+       
+       function [fillValveOpenAmt,dTintdt,dTextdt,dTextFdt] = calcEffectOfFillingNoVentWithHeat(obj,mdotBetweenTanks,QExt)
+           fillValveOpenAmt = obj.findFillValvePositionForFlow(mdotBetweenTanks);
+           systemCopy = copy(obj);
+           systemCopy.fillValveOpenAmt = fillValveOpenAmt;
+           systemCopy.ventValveOpenAmt = 0;
+           systemCopy.QExt = QExt;
+           xdot = systemCopy.getSystemChangeRateVector();
+           dTintdt = xdot(4);
+           dTextdt = xdot(2);
+           dTextFdt = xdot(6);
+       end
+       
+       function [fillValveOpenAmt,dTintdt,dTextdt,dTextFdt] = calcEffectOfFillingNoVentOrHeat(obj,mdotBetweenTanks)
+           [fillValveOpenAmt,dTintdt,dTextdt,dTextFdt] = obj.calcEffectOfFillingNoVentWithHeat(mdotBetweenTanks,0);
+       end
+       
+       function [fillValveOpenAmt,ventValveOpenAmt,TFluidExtReq,Q,mdotBetweenTanks,mdotVent,QInclFromEnv] = findControlPointForConditions(obj,mdotFillRate,internalTempChangeRate,externalTempChangeRate,externalFluidTempChangeRate)
+           [mdotBetweenTanks,mdotVent,TFluidExtReq,Q,QInclFromEnv] = obj.findPointForConditions(mdotFillRate,internalTempChangeRate,externalTempChangeRate,externalFluidTempChangeRate);
+           fillValveOpenAmt = obj.findFillValvePositionForFlow(mdotBetweenTanks);
+           ventValveOpenAmt = obj.findVentValvePositionForFlow(mdotVent);
        end
        
        function [fillValveOpenAmt,ventValveOpenAmt,TFluidExtReq,Q,mdotBetweenTanks,mdotVent,QInclFromEnv] = findControlEquilibriumPointForFillRate(obj,mdotFillRate)
@@ -109,7 +148,7 @@ classdef FillingSystem  < matlab.mixin.Copyable
            mdotVent = obj.calcMDotOutThisInternalTankReqInclTempChangeRate(mdotFillRate,internalTempChangeRate);
            mdotBetweenTanks = mdotVent + mdotFillRate;
            %Calculate Q
-           QTankReq = obj.externalTankSystem.externalTank.findHeatRateInputForTempChangeRateWithLiquidDrainingRate(externalTempChangeRate,mdotFillRate);
+           QTankReq = obj.externalTankSystem.externalTank.findHeatRateInputForTempChangeRateWithLiquidDrainingRate(externalTempChangeRate,mdotBetweenTanks);
            TFluidExtReq = obj.externalTankSystem.calcFluidTempRequiredForHeatFluxToTank(QTankReq);
            [Q,QIncludingFromEnv] = obj.externalTankSystem.calcExternalHeatFluxReqForFluidTempChangeRate(TFluidExtReq,obj.ambientTemp,externalFluidTempChangeRate);
        end
@@ -118,7 +157,7 @@ classdef FillingSystem  < matlab.mixin.Copyable
            mdotVent = obj.calcMDotOutThisInternalTankReq(mdotFillRate);
            mdotBetweenTanks = mdotVent + mdotFillRate;
            %Calculate Q
-           QTankReq = obj.externalTankSystem.externalTank.findHeatRateInputToKeepTempForDrainingLiquidRate(mdotFillRate);
+           QTankReq = obj.externalTankSystem.externalTank.findHeatRateInputToKeepTempForDrainingLiquidRate(mdotBetweenTanks);
            TFluidExtReq = obj.externalTankSystem.calcFluidTempRequiredForHeatFluxToTank(QTankReq);
            [Q,QIncludingFromEnv] = obj.externalTankSystem.calcExternalHeatFluxReqToKeepFluidAtTemp(TFluidExtReq,obj.ambientTemp);
        end
@@ -171,20 +210,20 @@ classdef FillingSystem  < matlab.mixin.Copyable
        function advanceSystemBySmallTimeIncrem(obj,dt)
             mdotFill = obj.pipeBetweenTanks.getMassFlow(obj.externalTank.vapourPressure,obj.internalTank.vapourPressure,obj.fillValveOpenAmt);
             mdotVent = obj.ventPipe.getMassFlow(obj.internalTank.vapourPressure,FillingSystem.ATM_PRESSURE,obj.ventValveOpenAmt);
-            EFlowBetweenTanks = dt.* mdotFill .* FluidType.NITROUS_LIQUID.getSpecificEnthalpy(obj.externalTank.temp,obj.exernalTank.vapourPressure);
-            obj.externalTank.changeNitrousMassEnergy(-mdotFill.*dt,-EFlowBetweenTanks);
-            obj.internalTank.changeNitrousMassEnergy(mdotFill.*dt,EFlowBetweenTanks);
+            EFlowBetweenTanks = dt.* mdotFill .* FluidType.NITROUS_LIQUID.getSpecificEnthalpy(obj.externalTank.temp,obj.externalTank.vapourPressure);
             if(obj.internalTank.liquidHeight >= obj.internalTank.gasVentHoleHeight)
                hIntVenting = FluidType.NITROUS_LIQUID.getSpecificEnthalpy(obj.internalTank.temp,obj.internalTank.vapourPressure);
             else
                hIntVenting = FluidType.NITROUS_GAS.getSpecificEnthalpy(obj.internalTank.temp,obj.internalTank.vapourPressure); 
             end
             EFlowOutOfRunTank = dt.* mdotVent .* hIntVenting;
-            obj.internalTank.changeNitrousMassEnergy(-mdotVent.*dt,-EFlowOutOfRunTank);
+            %obj.internalTank.changeNitrousMassEnergy(-mdotVent.*dt,-EFlowOutOfRunTank);
             %HEAT TRANSFERS
             QInternal = dt .* obj.calcCurrentHeatTransferRateAmbientToInternalTank();
-            obj.internalTank.addHeat(QInternal);
-            obj.externalTankSystem.doHeatTransferForTimeStep(dt,obj.ambientTemp,obj.QExt);
+            %obj.internalTank.addHeat(QInternal);
+            obj.internalTank.changeNitrousMassEnergy(mdotFill.*dt-mdotVent.*dt,EFlowBetweenTanks-EFlowOutOfRunTank+QInternal);
+            QExtTankToApply = obj.externalTankSystem.doHeatTransferForTimeStep(dt,obj.ambientTemp,obj.QExt);
+            obj.externalTank.changeNitrousMassEnergy(-mdotFill.*dt,-EFlowBetweenTanks+QExtTankToApply);
        end
        
        function obj2 = getCopyInNewState(obj,x,u)

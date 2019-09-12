@@ -414,6 +414,8 @@ classdef SaturatedNitrous
                    end
                 elseif(X2 >1 && X2<1.000001)
                     X2 = 1; %Gas 
+                elseif(X2 <0 && X2>-0.000001)
+                    X2 = 0; %Liquid
                 else
                     disp("INVALID X2 of "+X2);
                     error('INVALID x2 encountered'); 

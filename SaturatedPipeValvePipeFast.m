@@ -30,7 +30,9 @@ classdef SaturatedPipeValvePipeFast < matlab.mixin.Copyable
     end
     methods(Access=private)
         function mdot = getFlowRateOfDatapoint(obj,upstreamPressure,downstreamPressure,valveAmt)
-            mdot = polyval(obj.data([num2str(upstreamPressure),'|',num2str(downstreamPressure)]),valveAmt);
+            coeffs = obj.data([num2str(upstreamPressure),'|',num2str(downstreamPressure)]);
+            coeffs(length(coeffs)) = 0; %Force zero flow for closed valves
+            mdot = polyval(coeffs,valveAmt);
         end
         
         function PVals = getNearbyDataPoints(obj,P,maxP,minP)

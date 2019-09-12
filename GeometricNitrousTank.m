@@ -404,7 +404,7 @@ classdef GeometricNitrousTank < matlab.mixin.Copyable%handle %Handle class so th
 %                 val = true;
 %                 return;
 %             end
-           val = obj.getSaturatedLiquidMass() >= 0 && obj.getSaturatedVapourMass() >= 0 && SaturatedNitrous.getVapourPressure(obj.temp) >= obj.ATMOSPHERIC_PRESSURE;
+           val = obj.getSaturatedLiquidMass() >= 0 && obj.getSaturatedVapourMass() >= 0;
         end
         
         %Define getter function for the pressure at the base of the tank
