@@ -60,7 +60,7 @@ classdef SaturatedNitrous
             end
             rhoVapour = FluidType.NITROUS_GAS.getDensity(T,P);
             rhoLiquid = FluidType.NITROUS_LIQUID.getDensity(T,P);
-            rho = rhoVapour*X + rhoLiquid*(1-X);
+            rho = 1 / ((1/rhoVapour)*X + (1/rhoLiquid)*(1-X));
         end
         
         %Bubble growth time characteristic as defined in "Modeling feed

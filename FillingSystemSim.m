@@ -1,5 +1,6 @@
 clear
 clc
+close all
 
 ambientTemp = 40+273.15;
 internalTankHeight = 0.8;

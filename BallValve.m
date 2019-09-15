@@ -24,6 +24,8 @@ classdef BallValve < FlowCoeffFlowRestriction
         
         function [T,P,X,v] = getDownstreamTemperaturePressureFromMassFlow(obj,mdot,fluidType,TUpstream,PUpstream,XUpstream,vUpstream)
             v = vUpstream;
+            rhoUpstream = SaturatedNitrous.getDensity(XUpstream,TUpstream,PUpstream);
+            rhoVUpstream = v.*rhoUpstream;
 %             if(mdot == 0)
 %                T = TUpstream;
 %                P = PUpstream;
@@ -80,12 +82,16 @@ classdef BallValve < FlowCoeffFlowRestriction
             if(isSaturated)
                T = SaturatedNitrous.getSaturationTemperature(P);
                X = NitrousFluidCoolProp.getProperty(FluidProperty.VAPOR_QUALITY,FluidProperty.PRESSURE,P,FluidProperty.SPECIFIC_ENTHALPY,h1);
+               rho = SaturatedNitrous.getDensity(X,T,P);
+               v = rhoVUpstream ./ rho; %Continuity
                if(X >= 0 && X<=1)
                   return; 
                end
             else
                T = fluidType.getTemperatureFromPressureEnthalpy(P,h1);
                X = XUpstream;
+               rho = SaturatedNitrous.getDensity(X,T,P);
+               v = rhoVUpstream ./ rho; %Continuity
             end
             PSat = SaturatedNitrous.getVapourPressure(T);
             TSat = SaturatedNitrous.getSaturationTemperature(P);
@@ -104,10 +110,14 @@ classdef BallValve < FlowCoeffFlowRestriction
                     X = 0;
                 end
             end
+            rho = SaturatedNitrous.getDensity(X,T,P);
+            v = rhoVUpstream ./ rho; %Continuity
         end
         
         function [T,mdot,X,v] = getDownstreamTemperatureMassFlowFromPressureChange(obj,dP,fluidType,TUpstream,PUpstream,XUpstream,vUpstream)
             v = vUpstream;
+            rhoUpstream = SaturatedNitrous.getDensity(XUpstream,TUpstream,PUpstream);
+            rhoVUpstream = v.*rhoUpstream;
             TSatUpstream = SaturatedNitrous.getSaturationTemperature(PUpstream);
             liquidUpstream = fluidType == FluidType.NITROUS_LIQUID || (fluidType == FluidType.NITROUS_GENERAL && TUpstream<TSatUpstream);
             mdot = obj.getMassFlowForPressureChange(dP,fluidType,TUpstream,PUpstream,XUpstream);
@@ -130,12 +140,16 @@ classdef BallValve < FlowCoeffFlowRestriction
             if(isSaturated)
                T = SaturatedNitrous.getSaturationTemperature(P);
                X = NitrousFluidCoolProp.getProperty(FluidProperty.VAPOR_QUALITY,FluidProperty.PRESSURE,P,FluidProperty.SPECIFIC_ENTHALPY,h1);
+               rho = SaturatedNitrous.getDensity(X,T,P);
+               v = rhoVUpstream ./ rho; %Continuity
                if(X >= 0 && X<=1)
                   return; 
                end
             else
                T = fluidType.getTemperatureFromPressureEnthalpy(P,h1);
                X = XUpstream;
+               rho = SaturatedNitrous.getDensity(X,T,P);
+               v = rhoVUpstream ./ rho; %Continuity
             end
             PSat = SaturatedNitrous.getVapourPressure(T);
             TSat = SaturatedNitrous.getSaturationTemperature(P);
@@ -154,6 +168,9 @@ classdef BallValve < FlowCoeffFlowRestriction
                     X = 0;
                 end
             end
+            
+            rho = SaturatedNitrous.getDensity(X,T,P);
+            v = rhoVUpstream ./ rho; %Continuity
         end
     end
 end
