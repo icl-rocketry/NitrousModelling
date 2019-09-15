@@ -18,12 +18,17 @@ pipe2 = FluidPipe(0.25*pi*(pipeInternalDiameter).^2,1);
 % pvp = PipeValvePipe(pipe1,valve,pipe2);
 
 % valve = BallValve(0.2,0.025);
-valve = BallValve(1.4,0.3);
+valve = BallValve(1.4,0.025);
 pvp = PipeValvePipe(pipe1,valve,pipe2);
 tic;
 [TTest,mdotTest,XTest,vDownstreamTest] = pvp.getDownstreamTemperatureMassFlowFromPressureChange(dP,FluidType.NITROUS_GENERAL,upstreamT,upstreamP,upstreamQuality,0);
 mdotTestCorrected = dischargeCoefficient .* mdotTest;
 disp((mdotTestCorrected*1000)+" g/sec");
+rhoTest = SaturatedNitrous.getDensity(XTest,TTest,downstreamP);
+vDownstream2 = mdotTest / (rhoTest.*0.25*pi*(pipeInternalDiameter).^2);
+speedOfSound = NitrousFluidCoolProp.getProperty(FluidProperty.SPEED_OF_SOUND,FluidProperty.PRESSURE,downstreamP,FluidProperty.VAPOR_QUALITY,XTest);
+mdotU1 = mdotTestCorrected.*vDownstreamTest;
+mdotU2 = mdotTestCorrected.*vDownstream2;
 toc;
 if(XTest > 0.999)
     a = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.GAS,FluidProperty.SPEED_OF_SOUND,FluidProperty.TEMPERATURE,TTest,FluidProperty.PRESSURE,downstreamP);
@@ -38,20 +43,32 @@ if true
 end
 
 tic;
-parfor i=1:length(valveOpenAmt)
+for i=1:length(valveOpenAmt)
     try
-        valve = BallValve(0.2,valveOpenAmt(i));
+        valve = BallValve(1.4,valveOpenAmt(i));
         pvp = PipeValvePipe(pipe1,valve,pipe2);
+        disp("Computing for valve "+valveOpenAmt(i));
+        drawnow;
         [T(i),mdot(i),X(i),vDownstream(i)] = pvp.getDownstreamTemperatureMassFlowFromPressureChange(dP,FluidType.NITROUS_GENERAL,upstreamT,upstreamP,upstreamQuality,0);
+        disp("Finished pvp for valve "+valveOpenAmt(i));
+        drawnow;
         mdotCorrected(i) = dischargeCoefficient .* mdot(i);
-        if(X(i) > 0.999)
-        	a = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.GAS,FluidProperty.SPEED_OF_SOUND,FluidProperty.TEMPERATURE,T(i),FluidProperty.PRESSURE,downstreamP);
-        elseif(X(i) < 0.0001)
-            a = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.LIQUID,FluidProperty.SPEED_OF_SOUND,FluidProperty.TEMPERATURE,T(i),FluidProperty.PRESSURE,downstreamP);
+        %As corrected m, need to correct v
+        rhoTest = SaturatedNitrous.getDensity(X(i),T(i),downstreamP);
+        vDownstream(i) = mdotCorrected(i) / (rhoTest.*0.25*pi*(pipeInternalDiameter).^2);
+        if(vDownstream(i) > 0)
+            if(X(i) > 0.999)
+                a = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.GAS,FluidProperty.SPEED_OF_SOUND,FluidProperty.TEMPERATURE,T(i),FluidProperty.PRESSURE,downstreamP);
+            elseif(X(i) < 0.0001)
+                a = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.LIQUID,FluidProperty.SPEED_OF_SOUND,FluidProperty.TEMPERATURE,T(i),FluidProperty.PRESSURE,downstreamP);
+            else
+                a = NitrousFluidCoolProp.getProperty(FluidProperty.SPEED_OF_SOUND,FluidProperty.TEMPERATURE,T(i),FluidProperty.VAPOR_QUALITY,X(i));
+            end
+            M(i) = vDownstream(i) / a;
         else
-            a = NitrousFluidCoolProp.getProperty(FluidProperty.SPEED_OF_SOUND,FluidProperty.TEMPERATURE,T(i),FluidProperty.VAPOR_QUALITY,X(i));
+            M(i) = 0;
         end
-        M(i) = vDownstream(i) / a;
+        
     catch excep
         disp("valveOpenAmt: "+valveOpenAmt(i));
         drawnow;

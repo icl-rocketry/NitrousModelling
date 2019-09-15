@@ -30,7 +30,7 @@ for i=1:length(pressures)
         dataNotMap{3,j} = {};
     end
 end
-load('preBakedData/dataNotMapPartial.mat','dataNotMap');
+% load('preBakedData/dataNotMapPartial.mat','dataNotMap');
 dataCopy = dataNotMap;
 data = containers.Map('KeyType','char','ValueType','any');
 

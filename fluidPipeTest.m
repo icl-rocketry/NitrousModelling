@@ -3,16 +3,18 @@ clc
 close all
 
 pipe = FluidPipe(0.25*pi*(10e-3).^2,1);
-PUpstream = 65e5;
-TUpstreams = 290:-5:270;
+PUpstream = 70e5;
+TUpstreams = SaturatedNitrous.getSaturationTemperature(PUpstream);
 XUpstream = 0;
 vUpstream = 0;
-PDownstream = 65e5:-10:64.5e5;
+PDownstream = 6995774:-0.5:6995770;
 for j=1:length(TUpstreams)
     TUpstream = TUpstreams(j);
     for i=1:length(PDownstream)
         dP(i) = PDownstream(i) - PUpstream;
-        [T(i),mdot(j,i),X(i),vDownstream(i)] = pipe.getDownstreamTemperatureMassFlowFromPressureChange(dP(i),FluidType.NITROUS_GENERAL,TUpstream,PUpstream,XUpstream,vUpstream);
+        [~,mdotOriginal(j,i),~,~] = pipe.getDownstreamTemperatureMassFlowFromPressureChange(dP(i),FluidType.NITROUS_GENERAL,TUpstream,PUpstream,XUpstream,vUpstream);
+        disp("Approximate about "+dP(1));
+        [T(i),mdot(j,i),X(i),vDownstream(i)] = pipe.getDownstreamTemperatureMassFlowFromDPAboutPt(dP(1),dP(i),FluidType.NITROUS_GENERAL,TUpstream,PUpstream,XUpstream,vUpstream);
         k(j,i) = mdot(j,i) / sqrt(abs(dP(i)));
         specificGravity = SaturatedNitrous.getDensity(X(i),T(i),PDownstream(i)) ./ FlowCoefficient.RHO_WATER;
         Q = ((mdot(j,i).*3600) / (SaturatedNitrous.getDensity(X(i),T(i),PDownstream(i)))); %m^3/hour
@@ -23,7 +25,13 @@ end
 
 figure();
 plot(sqrt(abs(dP)),mdot);
-title('Sqrt pressure change vs mass flow');
+title('Sqrt pressure change vs mass flow (about pt)');
+xlabel('Sqrt pressure change');
+ylabel('Mass flow');
+
+figure();
+plot(sqrt(abs(dP)),mdotOriginal);
+title('Sqrt pressure change vs mass flow (direct)');
 xlabel('Sqrt pressure change');
 ylabel('Mass flow');
 

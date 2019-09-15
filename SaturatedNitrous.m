@@ -51,16 +51,17 @@ classdef SaturatedNitrous
         %Gets the density of the mixture for a given quality X, temperature
         %T and pressure P
         function rho = getDensity(X,T,P)
-            if(X == 0)
-                rho = FluidType.NITROUS_LIQUID.getDensity(T,P);
-                return;
-            elseif(X==1)
-                rho = FluidType.NITROUS_GAS.getDensity(T,P);
-                return;
-            end
-            rhoVapour = FluidType.NITROUS_GAS.getDensity(T,P);
-            rhoLiquid = FluidType.NITROUS_LIQUID.getDensity(T,P);
-            rho = 1 / ((1/rhoVapour)*X + (1/rhoLiquid)*(1-X));
+              rho = NitrousFluidCoolProp.getProperty(FluidProperty.DENSITY,FluidProperty.PRESSURE,P,FluidProperty.VAPOR_QUALITY,X);
+%             if(X == 0)
+%                 rho = FluidType.NITROUS_LIQUID.getDensity(T,P);
+%                 return;
+%             elseif(X==1)
+%                 rho = FluidType.NITROUS_GAS.getDensity(T,P);
+%                 return;
+%             end
+%             rhoVapour = FluidType.NITROUS_GAS.getDensity(T,P);
+%             rhoLiquid = FluidType.NITROUS_LIQUID.getDensity(T,P);
+%             rho = 1 / ((1/rhoVapour)*X + (1/rhoLiquid)*(1-X));
         end
         
         %Bubble growth time characteristic as defined in "Modeling feed
@@ -301,9 +302,14 @@ classdef SaturatedNitrous
             X2 = incompressibleCoeff * X2Inc + hemCoeff * X2Hem;
             T2 = incompressibleCoeff * T2Inc + hemCoeff * T2Hem;
             %disp("x2: "+X2+" T2: "+T2+" hem X2: "+X2Hem+" inc X2: "+X2Inc+" T2Hem: "+T2Hem+" T2Inc: "+T2Inc);
-            v2 = incompressibleCoeff * v2Inc + hemCoeff * v2Hem;
+            %v2 = incompressibleCoeff * v2Inc + hemCoeff * v2Hem;
             h2 = incompressibleCoeff * h2Inc + hemCoeff * h2Hem;
             G = incompressibleCoeff * GInc + hemCoeff * GHem;
+%             disp("P2: "+P2+", GInc: "+GInc+" GHem: "+GHem);
+            %G = rho*v
+            
+            rhoDownstream = SaturatedNitrous.getDensity(X2,T2,P2);
+            v2 = G ./ rhoDownstream;
             if(imag(T2)~=0)
                 disp(k);
                 disp(P1);
@@ -428,9 +434,7 @@ classdef SaturatedNitrous
             h2 = SaturatedNitrous.getSpecificEnthalpy(X2,T2,P2); %Gets the specific enthalpy downstream
             KEGain = h1-h2; %specific KE gain is difference in fluid enthalpies upstream and downstream
             v2 = sqrt(2*(0.5*v1.^2 + KEGain)); %Energy balance, assuming no other losses
-            rhoLiq = FluidType.NITROUS_LIQUID.getDensity(T2,P2);
-            rhoVap = FluidType.NITROUS_GAS.getDensity(T2,P2);
-            rhoMixture = (1-X2)*rhoLiq + X2*rhoVap;
+            rhoMixture = SaturatedNitrous.getDensity(X2,T2,P2);
             G = rhoMixture * v2;
         end
         
