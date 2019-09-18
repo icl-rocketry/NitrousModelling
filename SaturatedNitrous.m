@@ -51,6 +51,7 @@ classdef SaturatedNitrous
         %Gets the density of the mixture for a given quality X, temperature
         %T and pressure P
         function rho = getDensity(X,T,P)
+              
               rho = NitrousFluidCoolProp.getProperty(FluidProperty.DENSITY,FluidProperty.PRESSURE,P,FluidProperty.VAPOR_QUALITY,X);
 %             if(X == 0)
 %                 rho = FluidType.NITROUS_LIQUID.getDensity(T,P);
@@ -307,6 +308,12 @@ classdef SaturatedNitrous
             G = incompressibleCoeff * GInc + hemCoeff * GHem;
 %             disp("P2: "+P2+", GInc: "+GInc+" GHem: "+GHem);
             %G = rho*v
+
+            if(X2 < 0 && X2 > -0.000001)
+               X2 = 0; 
+            elseif(X2 > 1 && X2 < 1.000001)
+                   X2 = 1; 
+            end
             
             rhoDownstream = SaturatedNitrous.getDensity(X2,T2,P2);
             v2 = G ./ rhoDownstream;

@@ -21,9 +21,19 @@ classdef FluidPipe < FlowRestriction
                error('Unsupported fluid type. Only supports nitrous right now'); 
             end
             [X,T,v,~,G] = SaturatedNitrous.getDownstreamSaturatedNHNEFlowCond(XUpstream,TUpstream,PUpstream,PUpstream+dP,vUpstream,obj.pipeLength);
-            PDownToUse = PUpstream+dP;
-            [~,~,~,~,Gtest] = SaturatedNitrous.getDownstreamSaturatedNHNEFlowCond(XUpstream,TUpstream,PUpstream,PUpstream+dPAbout-1000,vUpstream,obj.pipeLength);
-            G = (Gtest / sqrt(abs(dPAbout-1000))) * sqrt(abs(dP));
+            if(abs(dP) < 1000 && dP <= 0) %can behave badly for small change in dP due to resolution of fluid data, hacky solution is to simplify for dP < 10K
+                %Values for dP of -1000Pa
+                [Xtest,Ttest,vtest,~,Gtest] = SaturatedNitrous.getDownstreamSaturatedNHNEFlowCond(XUpstream,TUpstream,PUpstream,PUpstream-1000,vUpstream,obj.pipeLength);
+                %Mass flow scales linearly with sqrt dP approximately
+                G = (Gtest / sqrt(1000)) * sqrt(abs(dP));
+%                 v = (vtest / sqrt(1000)) * sqrt(abs(dP));
+%                 specificKE = 0.5.*v.^2;
+%                 h2 = SaturatedNitrous.getSpecificEnthalpy(XUpstream,TUpstream,PUpstream) - specificKE;
+%                 T = fluidType.getTemperatureFromPressureEnthalpy(PUpstream+dP,h2);
+            else
+                [~,~,~,~,Gtest] = SaturatedNitrous.getDownstreamSaturatedNHNEFlowCond(XUpstream,TUpstream,PUpstream,PUpstream+dPAbout-1000,vUpstream,obj.pipeLength);
+                G = (Gtest / sqrt(abs(dPAbout-1000))) * sqrt(abs(dP));
+            end
             v = real(v);
             mdot = real(G*obj.crossSectionA);
         end
@@ -34,17 +44,17 @@ classdef FluidPipe < FlowRestriction
             end
             [X,T,v,~,G] = SaturatedNitrous.getDownstreamSaturatedNHNEFlowCond(XUpstream,TUpstream,PUpstream,PUpstream+dP,vUpstream,obj.pipeLength);
             %&& (X >= 0.9 || X <= 0.1) 
-%             disp("Sat T found to be: "+T+" for P= "+(PUpstream+dP));
-%             if(abs(dP) < 1000 && dP <= 0) %can behave badly for small change in dP due to resolution of fluid data, hacky solution is to simplify for dP < 10K
-%                 %Values for dP of -1000Pa
-%                 [Xtest,Ttest,vtest,~,Gtest] = SaturatedNitrous.getDownstreamSaturatedNHNEFlowCond(XUpstream,TUpstream,PUpstream,PUpstream-1000,vUpstream,obj.pipeLength);
-%                 %Mass flow scales linearly with sqrt dP approximately
-%                 G = (Gtest / sqrt(1000)) * sqrt(abs(dP));
-% %                 v = (vtest / sqrt(1000)) * sqrt(abs(dP));
-% %                 specificKE = 0.5.*v.^2;
-% %                 h2 = SaturatedNitrous.getSpecificEnthalpy(XUpstream,TUpstream,PUpstream) - specificKE;
-% %                 T = fluidType.getTemperatureFromPressureEnthalpy(PUpstream+dP,h2);
-%             end
+            %disp("Sat T found to be: "+T+" for P= "+(PUpstream+dP));
+            if(abs(dP) < 1000 && dP <= 0) %can behave badly for small change in dP due to resolution of fluid data, hacky solution is to simplify for dP < 10K
+                %Values for dP of -1000Pa
+                [Xtest,Ttest,vtest,~,Gtest] = SaturatedNitrous.getDownstreamSaturatedNHNEFlowCond(XUpstream,TUpstream,PUpstream,PUpstream-1000,vUpstream,obj.pipeLength);
+                %Mass flow scales linearly with sqrt dP approximately
+                G = (Gtest / sqrt(1000)) * sqrt(abs(dP));
+%                 v = (vtest / sqrt(1000)) * sqrt(abs(dP));
+%                 specificKE = 0.5.*v.^2;
+%                 h2 = SaturatedNitrous.getSpecificEnthalpy(XUpstream,TUpstream,PUpstream) - specificKE;
+%                 T = fluidType.getTemperatureFromPressureEnthalpy(PUpstream+dP,h2);
+            end
             v = real(v);
             mdot = real(G*obj.crossSectionA);
         end

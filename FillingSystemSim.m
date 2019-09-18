@@ -9,7 +9,7 @@ externalTankDiameter = 130e-3;
 internalTankCrossSectionA = 0.25*pi*(internalTankDiameter).^2;
 internalVentHoleHeight = 0.8.*internalTankHeight;
 initialInternalNitrousMass = 4;
-initialExternalNitrousMass = 7;
+initialExternalNitrousMass = 10;
 externalTankHeight = 1;
 externalTankCrossSectionA = 0.25*pi*(externalTankDiameter).^2;
 internalTankSurfaceArea = pi*internalTankDiameter*internalTankHeight+2*internalTankCrossSectionA;
@@ -32,16 +32,17 @@ heatTransferCoeffExternalTankWithFluid = 13.5 /  externalTankWallThickness; %Sta
 SHCFluid = 3000; %Very approx
 %Vague guess
 externalTankFluidSurfaceArea = pi*(externalTankDiameter+2e-2)*externalTankHeight+2*0.25*pi*(externalTankDiameter+2e-2)^2;
-%Bad estimate, but assuming simply 4mm of substance with thermal
+%Bad estimate, but assuming simply 15mm of substance with thermal
 %conductivity 0.2 and only conduction
-externalTankFluidHeatTransferCoeffWithSurroundings = 0.2/4e-3;
+externalTankFluidHeatTransferCoeffWithSurroundings = 0.2/15e-3;
 %Simplistic guess
 extFluidVol = externalTankHeight*(0.25*pi*(externalTankDiameter+2e-2)^2-0.25*pi*(externalTankDiameter)^2);
 mFluid = 997*extFluidVol; %Water density of 997 assumed
 
 initialInternalTankTemp = -20+273.15;
 initialExternalTankTemp = -18+273.15;
-initialExtFluidTemp = -16.9446+273.15;
+initialExtFluidTemp = -16.5+273.15;
+% initialExtFluidTemp = -17.5746+273.15;
 % initialInternalTankTemp = -20+273.15;
 % initialExternalTankTemp = 34+273.15;
 % initialExtFluidTemp = 34+273.15;
@@ -54,7 +55,7 @@ fillingSystem = FillingSystem(ambientTemp,internalTankHeight,internalTankCrossSe
                externalTankFluidHeatTransferCoeffWithSurroundings,mFluid,initialInternalTankTemp,...
                initialExternalTankTemp,initialExtFluidTemp);
            
-mdotFillRate = 100e-3;
+mdotFillRate = 40e-3;
 internalTempChangeRate = 0 / 60.0; %C/min -> C/sec
 externalTempChangeRate = 0 / 60.0; %C/sec
 externalFluidTempChangeRate = 0 / 60.0; %C/sec
@@ -90,7 +91,7 @@ disp("T Ext fluid used: "+(fillingSystem.externalTankSystem.TFluid-273.15)+" C")
 disp("T Ext fluid change rate: "+(dTextFdt2*60)+" C/min");
 
 disp("----------------------------");
-mdotFillRate = 100e-3;
+mdotFillRate = 40e-3;
 [fillValveOpenAmt3,dTintdt3,TFluidExtReq3,Q3,QInclFromEnv3] = fillingSystem.calcFillingPointNoVentExternalTankEquilibrium(mdotFillRate);
 disp("If close vent valve and want to stabilize external tank system:");
 disp("To maintain fill rate of "+(mdotFillRate*1000)+" g/sec need fill valve "+(fillValveOpenAmt3*100)+"% open");
@@ -106,10 +107,13 @@ finalTargetInternalTankTemp = 30+273.15;
 maxQExt = 2000; %2000W max heating capacity
 minQExt = -500; %Max 500W cooling ability
 targetInternalTankEndMass = 8; %8Kg
-maxPreferredFillingRate = 100e-3; %100g/sec
+maxPreferredFillingRate = 40e-3; %40g/sec
 trajectoryGen = FillingSystemTrajectoryGen(fillingPreferredInternalTankTemp,...
                fillingPreferredExternalTankTemp,finalTargetInternalTankTemp,...
                maxQExt,minQExt,targetInternalTankEndMass,maxPreferredFillingRate);
+           
+fillingSystem.internalTank.forceSetNitrousMass(0);
+fillingSystem.internalTank.forceSetTemp(SaturatedNitrous.getSaturationTemperature(101325));
            
 tic;
 trajectory = trajectoryGen.genTrajectory(fillingSystem);
@@ -117,7 +121,7 @@ toc;
 vis = SystemVisualization();
 while(true)
     t = 0;
-    while(t<=60)
+    while(t<=120)
         t = t+0.1;
         [xSim,uSim] = trajectory.getXAndUForTime(t);
         vis.draw(xSim,uSim,t);

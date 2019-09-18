@@ -41,8 +41,8 @@ classdef FillingSystem  < matlab.mixin.Copyable
             obj.ambientTemp = ambientTemp;
             obj.internalTank = GeometricNitrousTank(initialInternalTankTemp,initialInternalNitrousMass,internalTankHeight,internalTankCrossSectionA,internalVentHoleHeight); 
             obj.externalTank = GeometricNitrousTank(initialExternalTankTemp,initialExternalNitrousMass,externalTankHeight,externalTankCrossSectionA,externalTankHeight);
-            obj.ventPipe = SaturatedPipeValvePipeFast('preBakedData/saturatedGasPipeValveFlowRates.mat');
-            obj.pipeBetweenTanks = SaturatedPipeValvePipeFast('preBakedData/saturatedLiquidPipeValveFlowRates.mat');
+            obj.ventPipe = SaturatedPipeValvePipeFast('preBakedData/saturatedGasPipeValveFlowRates.mat','preBakedData/saturatedGasPipeValveFlowRatesInverted.mat');
+            obj.pipeBetweenTanks = SaturatedPipeValvePipeFast('preBakedData/saturatedLiquidPipeValveFlowRates.mat','preBakedData/saturatedLiquidPipeValveFlowRatesInverted.mat');
             obj.internalTankSurfaceArea = internalTankSurfaceArea;
             obj.heatTransferCoeffInternalTank = heatTransferCoeffInternalTank;
             obj.externalTankSystem = ExternalTankSystem(obj.externalTank,externalTankSurfaceArea,...
@@ -52,8 +52,13 @@ classdef FillingSystem  < matlab.mixin.Copyable
        end
        
        function fillValveOpenAmt = findFillValvePositionForFlow(obj,mdotBetweenTanks)
+           fillValveOpenAmt = 0.5;
+           if(obj.pipeBetweenTanks.hasInvertedData)
+                fillValveOpenAmt = obj.pipeBetweenTanks.getValvePos(obj.externalTank.vapourPressure,obj.internalTank.vapourPressure,mdotBetweenTanks);
+               return;
+           end
            try
-               fillValveOpenAmt = betterfzero(@getMDotBetweenTanksErr,0.5,0,1,1e-7,1000,0.5*10^-16,true);
+               fillValveOpenAmt = betterfzero(@getMDotBetweenTanksErr,fillValveOpenAmt,0,1,1e-7,1000,0.5*10^-16,true);
            catch excep
                disp("Error finding fill valve open amt for mass flow "+mdotBetweenTanks);
                rethrow excep;
@@ -64,8 +69,13 @@ classdef FillingSystem  < matlab.mixin.Copyable
        end
        
        function ventValveOpenAmt = findVentValvePositionForFlow(obj,mdotVent)
+           ventValveOpenAmt = 0.5;
+           if(obj.ventPipe.hasInvertedData)
+                ventValveOpenAmt = obj.ventPipe.getValvePos(obj.internalTank.vapourPressure,FillingSystem.ATM_PRESSURE,mdotVent);
+               return;
+           end
            try
-               ventValveOpenAmt = betterfzero(@getMDotVentErr,0.5,0,1,1e-7,1000,0.5*10^-16,true);
+               ventValveOpenAmt = betterfzero(@getMDotVentErr,ventValveOpenAmt,0,1,1e-7,1000,0.5*10^-16,true);
            catch except
                disp("Error finding vent valve open amt for mass flow "+mdotVent);
                disp(except);
@@ -103,14 +113,56 @@ classdef FillingSystem  < matlab.mixin.Copyable
            dTextFdt = xdot(6);
        end
        
+       function xdot = calcEffectOfControlOnSystem(obj,fillValveOpenAmt,ventValveOpenAmt,Q)
+           systemCopy = copy(obj);
+           systemCopy.fillValveOpenAmt = fillValveOpenAmt;
+           systemCopy.ventValveOpenAmt = ventValveOpenAmt;
+           systemCopy.QExt = Q;
+           xdot = systemCopy.getSystemChangeRateVector();
+       end
+       
+       function xdot = calcEffectOfControlOnSystemWithDiffExtFluidT(obj,fillValveOpenAmt,ventValveOpenAmt,Q,TExtFluid)
+           systemCopy = copy(obj);
+           systemCopy.externalTankSystem.TFluid = TExtFluid;
+           systemCopy.fillValveOpenAmt = fillValveOpenAmt;
+           systemCopy.ventValveOpenAmt = ventValveOpenAmt;
+           systemCopy.QExt = Q;
+           xdot = systemCopy.getSystemChangeRateVector();
+           disp("TFluid: "+TExtFluid);
+           disp(xdot);
+       end
+       
+       function [dTintdt] = calcEffectOfFullyVentingNoFill(obj)
+           systemCopy = copy(obj);
+           systemCopy.fillValveOpenAmt = 0;
+           systemCopy.ventValveOpenAmt = 1;
+           xdot = systemCopy.getSystemChangeRateVector();
+           dTintdt = xdot(4);
+       end
+       
        function [fillValveOpenAmt,dTintdt,dTextdt,dTextFdt] = calcEffectOfFillingNoVentOrHeat(obj,mdotBetweenTanks)
            [fillValveOpenAmt,dTintdt,dTextdt,dTextFdt] = obj.calcEffectOfFillingNoVentWithHeat(mdotBetweenTanks,0);
        end
        
-       function [fillValveOpenAmt,ventValveOpenAmt,TFluidExtReq,Q,mdotBetweenTanks,mdotVent,QInclFromEnv] = findControlPointForConditions(obj,mdotFillRate,internalTempChangeRate,externalTempChangeRate,externalFluidTempChangeRate)
-           [mdotBetweenTanks,mdotVent,TFluidExtReq,Q,QInclFromEnv] = obj.findPointForConditions(mdotFillRate,internalTempChangeRate,externalTempChangeRate,externalFluidTempChangeRate);
-           fillValveOpenAmt = obj.findFillValvePositionForFlow(mdotBetweenTanks);
-           ventValveOpenAmt = obj.findVentValvePositionForFlow(mdotVent);
+       function [fillValveOpenAmt,ventValveOpenAmt,TFluidExtReq,Q,mdotBetweenTanks,mdotVent,QInclFromEnv] = findControlPointForConditions(obj,mdotFillRate,internalTempChangeRate,externalTempChangeRate,externalFluidTempChangeRate,isMaxingIntTempChangeRate)
+           if ~exist('isMaxingIntTempChangeRate','var')
+              isMaxingIntTempChangeRate = false; 
+           end
+           [mdotBetweenTanks,mdotVent,TFluidExtReq,Q,QInclFromEnv] = obj.findPointForConditions(mdotFillRate,internalTempChangeRate,externalTempChangeRate,externalFluidTempChangeRate,isMaxingIntTempChangeRate);
+           if(mdotVent < 0 || obj.internalTank.vapourPressure < FillingSystem.ATM_PRESSURE+500e3 || isMaxingIntTempChangeRate) %Requested internal tank temp change rate too high, just don't vent
+               mdotVent = 0;
+               mdotBetweenTanks = mdotFillRate;
+           end
+           if(mdotBetweenTanks == 0)
+               fillValveOpenAmt = 0;
+           else
+                fillValveOpenAmt = obj.findFillValvePositionForFlow(mdotBetweenTanks);
+           end
+           if(mdotVent == 0)
+              ventValveOpenAmt = 0; 
+           else
+              ventValveOpenAmt = obj.findVentValvePositionForFlow(mdotVent);
+           end
        end
        
        function [fillValveOpenAmt,ventValveOpenAmt,TFluidExtReq,Q,mdotBetweenTanks,mdotVent,QInclFromEnv] = findControlEquilibriumPointForFillRate(obj,mdotFillRate)
@@ -122,30 +174,39 @@ classdef FillingSystem  < matlab.mixin.Copyable
 %            disp("T Ext fluid: "+TFluidExtReq);
 %            disp("Q: "+Q);
            
-            try
-           fillValveOpenAmt = betterfzero(@getMDotBetweenTanksErr,0.5,0,1,1e-7,1000,0.5*10^-16,true);
-            catch excep
-                disp("Error finding fill valve open amt for mass flow "+mdotBetweenTanks);
-                rethrow excep;
-            end
-            try
-                ventValveOpenAmt = betterfzero(@getMDotVentErr,0.5,0,1,1e-7,1000,0.5*10^-16,true);
-            catch excep
-                disp("Error finding vent valve open amt for mass flow "+mdotVent);
-                rethrow excep;
-            end
-           
-           function mdotBetweenTanksErr = getMDotBetweenTanksErr(fillValveOpenAmt)
-               mdotBetweenTanksErr = mdotBetweenTanks - obj.getFlowBetweenTanksIfFillValveOpenAmtWasThis(fillValveOpenAmt);
-           end
-           
-           function mdotVentErr = getMDotVentErr(ventValveOpenAmt)
-               mdotVentErr = mdotVent - obj.getFlowOutIfVentValveOpenAmtWasThis(ventValveOpenAmt);
-           end
+           fillValveOpenAmt = obj.findFillValvePositionForFlow(mdotBetweenTanks);
+           ventValveOpenAmt = obj.findVentValvePositionForFlow(mdotVent);
+%             try
+%            fillValveOpenAmt = betterfzero(@getMDotBetweenTanksErr,0.5,0,1,1e-7,1000,0.5*10^-16,true);
+%             catch excep
+%                 disp("Error finding fill valve open amt for mass flow "+mdotBetweenTanks);
+%                 rethrow excep;
+%             end
+%             try
+%                 ventValveOpenAmt = betterfzero(@getMDotVentErr,0.5,0,1,1e-7,1000,0.5*10^-16,true);
+%             catch excep
+%                 disp("Error finding vent valve open amt for mass flow "+mdotVent);
+%                 rethrow excep;
+%             end
+%            
+%            function mdotBetweenTanksErr = getMDotBetweenTanksErr(fillValveOpenAmt)
+%                mdotBetweenTanksErr = mdotBetweenTanks - obj.getFlowBetweenTanksIfFillValveOpenAmtWasThis(fillValveOpenAmt);
+%            end
+%            
+%            function mdotVentErr = getMDotVentErr(ventValveOpenAmt)
+%                mdotVentErr = mdotVent - obj.getFlowOutIfVentValveOpenAmtWasThis(ventValveOpenAmt);
+%            end
        end
        
-       function [mdotBetweenTanks,mdotVent,TFluidExtReq,Q,QIncludingFromEnv] = findPointForConditions(obj,mdotFillRate,internalTempChangeRate,externalTempChangeRate,externalFluidTempChangeRate)
-           mdotVent = obj.calcMDotOutThisInternalTankReqInclTempChangeRate(mdotFillRate,internalTempChangeRate);
+       function [mdotBetweenTanks,mdotVent,TFluidExtReq,Q,QIncludingFromEnv] = findPointForConditions(obj,mdotFillRate,internalTempChangeRate,externalTempChangeRate,externalFluidTempChangeRate,isMaxingIntTempChangeRate)
+           if ~exist('isMaxingIntTempChangeRate','var')
+              isMaxingIntTempChangeRate = false; 
+           end
+           if isMaxingIntTempChangeRate
+                mdotVent = 0;
+           else
+                mdotVent = obj.calcMDotOutThisInternalTankReqInclTempChangeRate(mdotFillRate,internalTempChangeRate);
+           end
            mdotBetweenTanks = mdotVent + mdotFillRate;
            %Calculate Q
            QTankReq = obj.externalTankSystem.externalTank.findHeatRateInputForTempChangeRateWithLiquidDrainingRate(externalTempChangeRate,mdotBetweenTanks);
@@ -207,6 +268,18 @@ classdef FillingSystem  < matlab.mixin.Copyable
            mdotVent = obj.ventPipe.getMassFlow(obj.internalTank.vapourPressure,FillingSystem.ATM_PRESSURE,ventValveOpenAmt);
        end
        
+       function DExtTdt = calcDExtTdtForDiffExtFluidT(obj,fillValveOpenAmt,TFluidExt,QExt)
+           dt = 0.25;
+           clone = copy(obj);
+           T1 = obj.externalTank.temp;
+           mdotFill = obj.pipeBetweenTanks.getMassFlow(obj.externalTank.vapourPressure,obj.internalTank.vapourPressure,fillValveOpenAmt);
+           EFlowBetweenTanks = dt.* mdotFill .* FluidType.NITROUS_LIQUID.getSpecificEnthalpy(obj.externalTank.temp,obj.externalTank.vapourPressure);
+           clone.externalTankSystem.TFluid = TFluidExt;
+           QExtTankToApply = dt .* obj.externalTankSystem.externalTankSurfaceArea .* obj.externalTankSystem.heatTransferCoeffTankWithFluid .* (TFluidExt - obj.externalTank.temp);
+           clone.externalTank.changeNitrousMassEnergy(-mdotFill.*dt,-EFlowBetweenTanks+QExtTankToApply);
+           DExtTdt = (clone.externalTank.temp-T1) ./ dt;
+       end
+       
        function advanceSystemBySmallTimeIncrem(obj,dt)
             mdotFill = obj.pipeBetweenTanks.getMassFlow(obj.externalTank.vapourPressure,obj.internalTank.vapourPressure,obj.fillValveOpenAmt);
             mdotVent = obj.ventPipe.getMassFlow(obj.internalTank.vapourPressure,FillingSystem.ATM_PRESSURE,obj.ventValveOpenAmt);
@@ -221,7 +294,14 @@ classdef FillingSystem  < matlab.mixin.Copyable
             %HEAT TRANSFERS
             QInternal = dt .* obj.calcCurrentHeatTransferRateAmbientToInternalTank();
             %obj.internalTank.addHeat(QInternal);
-            obj.internalTank.changeNitrousMassEnergy(mdotFill.*dt-mdotVent.*dt,EFlowBetweenTanks-EFlowOutOfRunTank+QInternal);
+            
+            dmInt = mdotFill.*dt-mdotVent.*dt;
+            if(obj.internalTank.mTotalNitrous + dmInt < 0) %Don't allow negative mass
+               dmInt = -obj.internalTank.mTotalNitrous;
+            end
+%             disp("Old temp: "+obj.internalTank.temp);
+            obj.internalTank.changeNitrousMassEnergy(dmInt,EFlowBetweenTanks-EFlowOutOfRunTank+QInternal);
+%             disp("vent: "+mdotVent+" new temp: "+obj.internalTank.temp);
             QExtTankToApply = obj.externalTankSystem.doHeatTransferForTimeStep(dt,obj.ambientTemp,obj.QExt);
             obj.externalTank.changeNitrousMassEnergy(-mdotFill.*dt,-EFlowBetweenTanks+QExtTankToApply);
        end

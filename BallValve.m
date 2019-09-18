@@ -82,9 +82,9 @@ classdef BallValve < FlowCoeffFlowRestriction
             if(isSaturated)
                T = SaturatedNitrous.getSaturationTemperature(P);
                X = NitrousFluidCoolProp.getProperty(FluidProperty.VAPOR_QUALITY,FluidProperty.PRESSURE,P,FluidProperty.SPECIFIC_ENTHALPY,h1);
-               rho = SaturatedNitrous.getDensity(X,T,P);
-               v = rhoVUpstream ./ rho; %Continuity
                if(X >= 0 && X<=1)
+                   rho = SaturatedNitrous.getDensity(X,T,P);
+                   v = rhoVUpstream ./ rho; %Continuity
                   return; 
                end
             else

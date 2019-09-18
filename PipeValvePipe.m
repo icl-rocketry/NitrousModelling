@@ -113,7 +113,7 @@ classdef PipeValvePipe < FlowRestriction
                             err = max(0.1,mdot-mdot2);
                         end
                         
-%                         disp("Downstream P too low, P2: "+P2+" Err: "+err);
+%                          disp("Downstream P too low, P2: "+P2+" Err: "+err+" mdot: "+mdot);
                         return;
                     elseif(strcmp(ME.identifier,'BallValve:PNan')) %Valve is closed, downstream P can be any value
                         mdot2 = 0;

@@ -413,7 +413,7 @@ classdef GeometricNitrousAndAirTank < matlab.mixin.Copyable%handle %Handle class
             clone.mTotalNitrous = obj.mTotalNitrous;
             %Solving for in saturated state max T until modelling can do
             %supercritical
-            T2 = betterfzero(@errTemp,obj.temp,200,SaturatedNitrous.T_CRIT-2,2); %Solve for T that gives correct internal energy
+            T2 = betterfzero(@errTemp,obj.temp,-90+273.15,SaturatedNitrous.T_CRIT-2,2); %Solve for T that gives correct internal energy
             %Update tank temp and nitrous vol
             obj.temp = real(T2);
             obj.updateVolNitrous();
@@ -753,6 +753,9 @@ classdef GeometricNitrousAndAirTank < matlab.mixin.Copyable%handle %Handle class
                return;
             end
             val = SaturatedNitrous.getVapourPressure(obj.temp);
+            if(val < obj.airPressure)
+               val = obj.airPressure; 
+            end
             
             function err = errorNonSaturatedPressure(P)
                 P = real(P);

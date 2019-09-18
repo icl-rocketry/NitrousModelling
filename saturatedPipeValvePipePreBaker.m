@@ -1,14 +1,14 @@
 clear
 clc
 %For gas on saturation line
-filename = 'preBakedData/saturatedLiquidPipeValveFlowRatesSwagelok.mat';
+filename = 'preBakedData/saturatedGasPipeValveFlowRates2.mat';
 %Gas one calculated with internal diameter of 4.8mm
 %Liquid one calculated with internal diamater of 10.2108mm
-pipeInternalDiameter = 10.2108e-3;
-valveFullyOpenFlowCoefficient = 1.4; %12 for 1/4in non-swagelok and 0.2 for 1/8in swagelok and 1.4 for 1/4in swagelok
-upstreamQuality = 0; %1 is vapour, 0 is liquid
-%Cd of 0.8 for liquid flow, Cd of 1 for gas flow
-dischargeCoefficient = 0.8; %Eg. mass flow calculated will be 0.8*mass flow from isentropic model. (Ratio of actual flow to ideal flow)
+pipeInternalDiameter = 4.8e-3;
+valveFullyOpenFlowCoefficient = 0.2; %12 for 1/4in non-swagelok and 0.2 for 1/8in swagelok and 1.4 for 1/4in swagelok
+upstreamQuality = 1; %1 is vapour, 0 is liquid
+%Cd of 0.8 for liquid flow, Cd of 0.9 for gas flow
+dischargeCoefficient = 0.9; %Eg. mass flow calculated will be 0.8*mass flow from isentropic model. (Ratio of actual flow to ideal flow)
 
 pipe1 = FluidPipe(0.25*pi*(pipeInternalDiameter).^2,1);
 valveOpenAmt = 0:0.025:1;
@@ -61,6 +61,7 @@ parfor z=1:len
         end
     end
     mdotPolynomialFitCoeffs = polyfit(valveOpenAmt,mdot,10);
+    mdotPolynomialFitCoeffs(length(mdotPolynomialFitCoeffs)) = 0; %Force through origin
     dataNotMap{3,z} = mdotPolynomialFitCoeffs;    
 end
 toc;

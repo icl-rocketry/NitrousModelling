@@ -90,12 +90,18 @@ classdef GeometricNitrousTank < matlab.mixin.Copyable%handle %Handle class so th
 %             end
             E1 = 0;
             %PLiq = obj.getPressureAtHeight(0.5*obj.liquidHeight);
-            if(obj.mLiquid == 0)
+            if(abs(obj.mLiquid) < 0.0001)
                 E2 = 0;
             else
-                E2 = obj.mLiquid * FluidType.NITROUS_LIQUID.getSpecificInternalEnergy(obj.temp,obj.vapourPressure);
+                uL = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.LIQUID,FluidProperty.SPECIFIC_INTERNAL_ENERGY,FluidProperty.TEMPERATURE,obj.temp,FluidProperty.PRESSURE,obj.vapourPressure);
+                E2 = obj.mLiquid * uL; %FluidType.NITROUS_LIQUID.getSpecificInternalEnergy(obj.temp,obj.vapourPressure);
             end
-            E3 = obj.mVapour * FluidType.NITROUS_GAS.getSpecificInternalEnergy(obj.temp,obj.vapourPressure);
+            if(abs(obj.mVapour) < 0.0001)
+                E3 = 0;
+            else
+                uG = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.GAS,FluidProperty.SPECIFIC_INTERNAL_ENERGY,FluidProperty.TEMPERATURE,obj.temp,FluidProperty.PRESSURE,obj.vapourPressure);
+                E3 = obj.mVapour * uG;%FluidType.NITROUS_GAS.getSpecificInternalEnergy(obj.temp,obj.vapourPressure);
+            end
             E = E1 + E2 + E3;
         end
         
@@ -167,7 +173,7 @@ classdef GeometricNitrousTank < matlab.mixin.Copyable%handle %Handle class so th
         
         function dEdt = findIntEnergyChangeRateForTempChangeRateWithFillRate(obj,dTdt,netMdotFill)
             clone = copy(obj);
-            dt = 1e-3;
+            dt = 1e-2;
             clone.mTotalNitrous = obj.mTotalNitrous + netMdotFill.*dt;
             clone.temp = clone.temp + dTdt.*dt;
             dE = clone.getInternalEnergy() - obj.getInternalEnergy();
@@ -175,14 +181,14 @@ classdef GeometricNitrousTank < matlab.mixin.Copyable%handle %Handle class so th
         end
         
         function Q = findHeatRateInputForTempChangeRateWithLiquidDrainingRate(obj,dTdt,mdotLiq)
-            h = FluidType.NITROUS_LIQUID.getSpecificEnthalpy(obj.temp,obj.getPressureAtHeight(0));
+            h = FluidType.NITROUS_LIQUID.getSpecificEnthalpy(obj.temp,obj.vapourPressure);
             H = h*mdotLiq; %Energy being lost due to liquid
             dEdt = obj.findIntEnergyChangeRateForTempChangeRateWithFillRate(dTdt,-mdotLiq);
             Q = dEdt + H;
         end
         
         function Q = findHeatRateInputToKeepTempForDrainingLiquidRate(obj,mdotLiq)
-            h = FluidType.NITROUS_LIQUID.getSpecificEnthalpy(obj.temp,obj.getPressureAtHeight(0));
+            h = FluidType.NITROUS_LIQUID.getSpecificEnthalpy(obj.temp,obj.vapourPressure);
             H = h*mdotLiq; %Energy being lost due to liquid
             dEdt = obj.findIntEnergyChangeRateForConstTemperatureWithFillRate(-mdotLiq); %dEdt to keep temp same
             Q = dEdt + H;
@@ -198,21 +204,62 @@ classdef GeometricNitrousTank < matlab.mixin.Copyable%handle %Handle class so th
         %energy/mass input, and negative for energy/mass output. EIn is not
         %specific, but should take into account mass and type of each mass
         %in it's calculation
+        function setNitrousMassEnergyAndAdjustTemp(obj,m,E)
+            obj.mTotalNitrous = m;
+            %Solving for in saturated state max T until modelling can do
+            %supercritical
+            T2 = betterfzero(@errTemp,obj.temp,182.23,SaturatedNitrous.T_CRIT-2,2); %Solve for T that gives correct internal energy
+            %Update tank temp and nitrous vol
+            obj.temp = real(T2);
+            
+            function err = errTemp(T)       
+               obj.temp = real(T);
+               if(obj.temp < 182.23) %Temp too low
+                   err = -1000000;
+                   return;
+               end
+               if(obj.temp > SaturatedNitrous.T_CRIT)
+                   err = 1000000;
+                   return;
+               end
+               E2 = obj.getInternalEnergy();               
+               err = E2 - E;
+%                fprintf(['T: ',num2str(T),', E: ',num2str(E2), ' Err: ',num2str(err),'\n']);
+            end
+        end
+        
+        %Change the nitrous in the tank's mass and energy. Positive for
+        %energy/mass input, and negative for energy/mass output. EIn is not
+        %specific, but should take into account mass and type of each mass
+        %in it's calculation
         function changeNitrousMassEnergy(obj,mIn,EIn)
             %Internal energy in the tank before
-            clone = copy(obj);
             ECv1 = obj.getInternalEnergy();
             %disp("E Before: "+ECv1);
-            ECv2 = ECv1 + EIn; %Internal energy of the tank after
 %             disp("E change: "+EIn);
 %             fprintf(['E1: ',num2str(ECv1),', E2: ',num2str(ECv2),'\n']);
 %             fprintf(['M1: ',num2str(obj.mTotalNitrous),', M2: ',num2str(obj.mTotalNitrous + mIn),'\n']);
             
             obj.mTotalNitrous = obj.mTotalNitrous + mIn; %Nitrous mass of tank after
+            
+            prevTemp = obj.temp;
+            if(TankEnergyBalanceFast.USE)
+                nitrousDensity = obj.mTotalNitrous / obj.tankTotalVolume;
+                specificE = (ECv1 + EIn) ./ obj.mTotalNitrous;
+                obj.temp = TankEnergyBalanceFast.getInstance().getTemp(nitrousDensity,specificE);
+                if(obj.temp < 182.23)
+                   obj.temp = 182.23; 
+                end
+                if(~isnan(obj.temp))
+                    return;
+                end
+            end
+            ECv2 = ECv1 + EIn; %Internal energy of the tank after
+            clone = copy(obj);
             clone.mTotalNitrous = obj.mTotalNitrous;
             %Solving for in saturated state max T until modelling can do
             %supercritical
-            T2 = betterfzero(@errTemp,obj.temp,182.23,SaturatedNitrous.T_CRIT-2,2); %Solve for T that gives correct internal energy
+            T2 = betterfzero(@errTemp,prevTemp,182.23,SaturatedNitrous.T_CRIT-2,2); %Solve for T that gives correct internal energy
             %Update tank temp and nitrous vol
             obj.temp = real(T2);
             
@@ -302,7 +349,11 @@ classdef GeometricNitrousTank < matlab.mixin.Copyable%handle %Handle class so th
         %Define getter function for mass of liquid in tank
         function mLiq=get.mLiquid(obj)
             if ~obj.isSaturated() %If not at saturation conditions, then assume all nitrous is a gas
-               mLiq = 0;
+               if(obj.vapourPressure > SaturatedNitrous.getVapourPressure(obj.temp))
+                    mLiq = obj.mTotalNitrous;
+               else
+                   mLiq = 0;
+               end
                return;
             end
             %From trivial re-arrangement of volume and mass summations
@@ -315,7 +366,11 @@ classdef GeometricNitrousTank < matlab.mixin.Copyable%handle %Handle class so th
         %Define getter function for mass of vapour in tank
         function mVap=get.mVapour(obj)
             if ~obj.isSaturated() %If not at saturation conditions, then assume all nitrous is a gas
-               mVap = obj.mTotalNitrous;
+                if(obj.vapourPressure < SaturatedNitrous.getVapourPressure(obj.temp))
+                    mVap = obj.mTotalNitrous;
+                else
+                   mVap = 0; 
+                end
                return;
             end
             %From trivial re-arrangement of volume and mass summations
@@ -343,6 +398,9 @@ classdef GeometricNitrousTank < matlab.mixin.Copyable%handle %Handle class so th
                 %nitrous
                rho = obj.mTotalNitrous / obj.tankTotalVolume;
                val = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.GAS,FluidProperty.PRESSURE,FluidProperty.TEMPERATURE,obj.temp,FluidProperty.DENSITY,rho);
+               if val > SaturatedNitrous.getVapourPressure(obj.temp)
+                   val = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.LIQUID,FluidProperty.PRESSURE,FluidProperty.TEMPERATURE,obj.temp,FluidProperty.DENSITY,rho);
+               end
                %If mass of nitrous is too low and pressure is not physical
                %(less than atmospheric)
                if(val < obj.ATMOSPHERIC_PRESSURE)
