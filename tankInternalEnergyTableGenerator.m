@@ -6,7 +6,7 @@ u = 0;
 mNitrous = 0;
 mNitrousMax = 20; %Kg
 mStep = 0.010;
-filename='preBakedData/nitrousTankInternalEnergiesv3.mat';
+filename='preBakedData/nitrousTankInternalEnergiesv2.mat';
 
 disp("Creating data struts...");
 drawnow;
@@ -34,7 +34,6 @@ for i=1:length(E)
 %         drawnow;
         data{1,u} = E(i);
         data{2,u} = mNitrous / tankVol;
-        disp(mNitrous+" -> "+data{2,u});
         data{3,u} = {};
         
         %Advance m nitrous
@@ -44,10 +43,6 @@ end
 
 disp("Created data struts ("+length(data)+" data points), STARTING calculations...");
 drawnow;
-
-if(true)
-    return;
-end
 
 dataMap = containers.Map('KeyType','char','ValueType','any');
 

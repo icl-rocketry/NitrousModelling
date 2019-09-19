@@ -15,6 +15,7 @@ classdef TankEnergyBalanceFast < matlab.mixin.Copyable
     methods(Static)
         function bal = getInstance()
            persistent instance;
+%             instance = [];
            if(isempty(instance))
               instance = TankEnergyBalanceFast('preBakedData/nitrousTankInternalEnergies.mat');
            end

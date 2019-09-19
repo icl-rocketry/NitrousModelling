@@ -234,15 +234,19 @@ classdef FillingSystem  < matlab.mixin.Copyable
        end
        
        function mdotOut = calcMDotOutInternalTankReq(obj,HeatTransferIntoTank,mdotFillRate,tank,extTankT)
-           hFromExt = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.LIQUID,FluidProperty.SPECIFIC_ENTHALPY,FluidProperty.TEMPERATURE,extTankT,FluidProperty.VAPOR_QUALITY,0);
-           hInt = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.GAS,FluidProperty.SPECIFIC_ENTHALPY,FluidProperty.TEMPERATURE,tank.temp,FluidProperty.VAPOR_QUALITY,1);
+%            hFromExt = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.LIQUID,FluidProperty.SPECIFIC_ENTHALPY,FluidProperty.TEMPERATURE,extTankT,FluidProperty.VAPOR_QUALITY,0);
+%            hInt = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.GAS,FluidProperty.SPECIFIC_ENTHALPY,FluidProperty.TEMPERATURE,tank.temp,FluidProperty.VAPOR_QUALITY,1);
+           hFromExt = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.LIQUID,FluidProperty.SPECIFIC_ENTHALPY,FluidProperty.TEMPERATURE,extTankT,FluidProperty.PRESSURE,SaturatedNitrous.getVapourPressure(extTankT));
+           hInt = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.GAS,FluidProperty.SPECIFIC_ENTHALPY,FluidProperty.TEMPERATURE,tank.temp,FluidProperty.PRESSURE,tank.vapourPressure);
            dEdt = tank.findIntEnergyChangeRateForConstTemperatureWithFillRate(mdotFillRate);
            mdotOut = (HeatTransferIntoTank - dEdt + mdotFillRate.*hFromExt)/(hInt - hFromExt);
        end
        
        function mdotOut = calcMDotOutInternalTankReqInclTempChangeRate(obj,HeatTransferIntoTank,mdotFillRate,tank,extTankT,internalTankTemperatureChangeRate)
-           hFromExt = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.LIQUID,FluidProperty.SPECIFIC_ENTHALPY,FluidProperty.TEMPERATURE,extTankT,FluidProperty.VAPOR_QUALITY,0);
-           hInt = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.GAS,FluidProperty.SPECIFIC_ENTHALPY,FluidProperty.TEMPERATURE,tank.temp,FluidProperty.VAPOR_QUALITY,1);
+           hFromExt = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.LIQUID,FluidProperty.SPECIFIC_ENTHALPY,FluidProperty.TEMPERATURE,extTankT,FluidProperty.PRESSURE,SaturatedNitrous.getVapourPressure(extTankT));
+           hInt = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.GAS,FluidProperty.SPECIFIC_ENTHALPY,FluidProperty.TEMPERATURE,tank.temp,FluidProperty.PRESSURE,tank.vapourPressure);
+%            hFromExt = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.LIQUID,FluidProperty.SPECIFIC_ENTHALPY,FluidProperty.TEMPERATURE,extTankT,FluidProperty.VAPOR_QUALITY,0);
+%            hInt = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.GAS,FluidProperty.SPECIFIC_ENTHALPY,FluidProperty.TEMPERATURE,tank.temp,FluidProperty.VAPOR_QUALITY,1);
            dEdt = tank.findIntEnergyChangeRateForTempChangeRateWithFillRate(internalTankTemperatureChangeRate,mdotFillRate);
            mdotOut = (HeatTransferIntoTank - dEdt + mdotFillRate.*hFromExt)/(hInt - hFromExt);
        end

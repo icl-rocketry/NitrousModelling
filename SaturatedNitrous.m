@@ -463,10 +463,21 @@ classdef SaturatedNitrous
 %             end
         end
         
+        function P = getVapourPressureFromFormula(T)
+            TRel = T / SaturatedNitrous.T_CRIT; %Relative temp
+            b = [-6.71893,1.35966,-1.3779,-4.051]; %Constants in equation
+            %Equation from paper
+            logPressureRatio = (1/TRel) * ( b(1)*(1-TRel) + b(2)*(1-TRel)^1.5 + b(3)*(1-TRel)^2.5 + b(4)*(1-TRel)^5 );
+            P = exp(logPressureRatio) * SaturatedNitrous.P_CRIT; %Calculate vapour pressure
+        end
+        
         %Gets the vapour pressure (Pa) of saturated nitrous at a given
         %temperature (K)
         function P = getVapourPressure(T)
-            P = NitrousFluidCoolProp.getProperty(FluidProperty.PRESSURE,FluidProperty.TEMPERATURE,T,FluidProperty.VAPOR_QUALITY,0);
+            %Polynomial fit to coolprop's output for speed enhancement
+            polyCoeffs = [6.30913881904569e-14,-1.51190519529204e-10,1.62556872417980e-07,-0.000103259603725827,0.0429133163140751,-12.1912294858819,2397.61266586979,-322316.427676396,28344892.9083561,-1472430566.16391,34309300122.4424];
+            P = polyval(polyCoeffs,T);
+%             P = NitrousFluidCoolProp.getProperty(FluidProperty.PRESSURE,FluidProperty.TEMPERATURE,T,FluidProperty.VAPOR_QUALITY,0);
 %             TRel = T / SaturatedNitrous.T_CRIT; %Relative temp
 %             b = [-6.71893,1.35966,-1.3779,-4.051]; %Constants in equation
 %             %Equation from paper
@@ -477,6 +488,7 @@ classdef SaturatedNitrous
         %Gets the liquid density (Kg/m^3) of saturated nitrous at a given
         %temperature (K)
         function rho = getLiquidDensity(T)
+%             rho = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.LIQUID,FluidProperty.DENSITY, FluidProperty.TEMPERATURE,T,FluidProperty.VAPOR_QUALITY,0);
             TRel = T / SaturatedNitrous.T_CRIT; %Relative temp
             b = [1.72328,-0.83950,0.51060,-0.10412]; %Constants in equation
             %Equation from paper
@@ -487,6 +499,7 @@ classdef SaturatedNitrous
         %Gets the vapour density (Kg/m^3) of saturated nitrous at a given
         %temperature (K)
         function rho = getVapourDensity(T)
+%               rho = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.GAS,FluidProperty.DENSITY, FluidProperty.TEMPERATURE,T,FluidProperty.VAPOR_QUALITY,1);
             TRel = SaturatedNitrous.T_CRIT/T; %Inverse of Relative temp
             b = [-1.00900,-6.28792,7.50332,-7.90463,0.629427]; %Constants in equation
             %Equation from paper

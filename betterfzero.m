@@ -112,6 +112,8 @@ function [x] = betterfzero(func,x0,minX,maxX,convergenceTolerance,MAX_ITERS,mind
                 Upper = x;
             end
         end
+        
+%         disp("Lower: "+(Lower-184.6839)+" Upper: "+(Upper-184.6839));
     end
 
     %If reach here then didn't converge to a solution

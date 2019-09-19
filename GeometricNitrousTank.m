@@ -243,9 +243,9 @@ classdef GeometricNitrousTank < matlab.mixin.Copyable%handle %Handle class so th
             obj.mTotalNitrous = obj.mTotalNitrous + mIn; %Nitrous mass of tank after
             
             prevTemp = obj.temp;
+            nitrousDensity = obj.mTotalNitrous / obj.tankTotalVolume;
+            specificE = (ECv1 + EIn) / obj.mTotalNitrous;
             if(TankEnergyBalanceFast.USE)
-                nitrousDensity = obj.mTotalNitrous / obj.tankTotalVolume;
-                specificE = (ECv1 + EIn) ./ obj.mTotalNitrous;
                 obj.temp = TankEnergyBalanceFast.getInstance().getTemp(nitrousDensity,specificE);
                 if(obj.temp < 182.23)
                    obj.temp = 182.23; 
@@ -253,13 +253,34 @@ classdef GeometricNitrousTank < matlab.mixin.Copyable%handle %Handle class so th
                 if(~isnan(obj.temp))
                     return;
                 end
+                %disp("NOT found temp for nitrous density: "+nitrousDensity+" with specific E "+(specificE)+" nitrous mass: "+obj.mTotalNitrous);
+            end
+            if(obj.mTotalNitrous <= 0)
+                obj.temp = SaturatedNitrous.getSaturationTemperature(101325);
+                return;
             end
             ECv2 = ECv1 + EIn; %Internal energy of the tank after
             clone = copy(obj);
             clone.mTotalNitrous = obj.mTotalNitrous;
             %Solving for in saturated state max T until modelling can do
             %supercritical
-            T2 = betterfzero(@errTemp,prevTemp,182.23,SaturatedNitrous.T_CRIT-2,2); %Solve for T that gives correct internal energy
+            try
+                if prevTemp <= 184.7 &&  specificE <= 339000
+                    T2 = 182.23;
+                else
+                    T2 = betterfzero(@errTemp,prevTemp,182.23,SaturatedNitrous.T_CRIT-2,2,1000,0.5e-50,true); %Solve for T that gives correct internal energy
+                end
+            catch err
+                %Initial tank conditions may disagree slightly with energy
+%                 disp(prevTemp+" "+nitrousDensity+" "+specificE);
+                %nitrousDensity <= 0.03 &&
+                if prevTemp <= 184.7 &&  specificE <= 339000
+                    T2 = 182.23;
+                else
+                    rethrow(err);
+                end
+            end
+            
             %Update tank temp and nitrous vol
             obj.temp = real(T2);
             
