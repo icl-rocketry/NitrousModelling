@@ -41,7 +41,6 @@ classdef SaturatedPipeValvePipeFast < matlab.mixin.Copyable
                 end
             end
             valveAmt = ppval(spline(upstreamPVals,valveAmts),upstreamPressure);
-%             disp("Found valve amt: "+valveAmt);
         end
         
         function mdot = getMassFlow(obj,upstreamPressure,downstreamPressure,valveAmt)
@@ -68,6 +67,12 @@ classdef SaturatedPipeValvePipeFast < matlab.mixin.Copyable
             coeffs = obj.dataInverted([num2str(upstreamPressure),'|',num2str(downstreamPressure)]);
             coeffs(length(coeffs)) = 0; %Force zero flow for closed valves
             valvePos = polyval(coeffs,mdot);
+            if(valvePos <= 0)
+                valvePos = 0;
+            end
+            if(valvePos >= 1)
+                valvePos = 1;
+            end
 %             disp("P1: "+upstreamPressure+", P2: "+downstreamPressure+", mdot: "+mdot+" valvePos: "+valvePos);
         end
         

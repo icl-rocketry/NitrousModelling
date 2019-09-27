@@ -103,6 +103,13 @@ classdef FillingSystem  < matlab.mixin.Copyable
        
        function [fillValveOpenAmt,dTintdt,dTextdt,dTextFdt] = calcEffectOfFillingNoVentWithHeat(obj,mdotBetweenTanks,QExt)
            fillValveOpenAmt = obj.findFillValvePositionForFlow(mdotBetweenTanks);
+%            if(fillValveOpenAmt <= 0)
+%               fillValveOpenAmt = 0; 
+%            end
+%            if(fillValveOpenAmt >= 1)
+%               fillValveOpenAmt = 1; 
+%            end
+           drawnow;
            systemCopy = copy(obj);
            systemCopy.fillValveOpenAmt = fillValveOpenAmt;
            systemCopy.ventValveOpenAmt = 0;
@@ -287,7 +294,13 @@ classdef FillingSystem  < matlab.mixin.Copyable
        function advanceSystemBySmallTimeIncrem(obj,dt)
             mdotFill = obj.pipeBetweenTanks.getMassFlow(obj.externalTank.vapourPressure,obj.internalTank.vapourPressure,obj.fillValveOpenAmt);
             mdotVent = obj.ventPipe.getMassFlow(obj.internalTank.vapourPressure,FillingSystem.ATM_PRESSURE,obj.ventValveOpenAmt);
-            EFlowBetweenTanks = dt.* mdotFill .* FluidType.NITROUS_LIQUID.getSpecificEnthalpy(obj.externalTank.temp,obj.externalTank.vapourPressure);
+            try
+                hExt = FluidType.NITROUS_LIQUID.getSpecificEnthalpy(obj.externalTank.temp,obj.externalTank.vapourPressure);
+            catch %Vapour pressure is slightly different to what coolprop expects
+                hExt = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.LIQUID,FluidProperty.SPECIFIC_ENTHALPY,FluidProperty.TEMPERATURE,obj.externalTank.temp,FluidProperty.VAPOR_QUALITY,0);
+            end
+            
+            EFlowBetweenTanks = dt.* mdotFill .* hExt;
             if(obj.internalTank.liquidHeight >= obj.internalTank.gasVentHoleHeight)
                hIntVenting = FluidType.NITROUS_LIQUID.getSpecificEnthalpy(obj.internalTank.temp,obj.internalTank.vapourPressure);
             else

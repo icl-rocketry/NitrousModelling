@@ -5,11 +5,11 @@ close all
 ambientTemp = 40+273.15;
 internalTankHeight = 0.8;
 internalTankDiameter = 150e-3;
-externalTankDiameter = 130e-3;
+externalTankDiameter = 400e-3;
 internalTankCrossSectionA = 0.25*pi*(internalTankDiameter).^2;
 internalVentHoleHeight = 0.8.*internalTankHeight;
 initialInternalNitrousMass = 4;
-initialExternalNitrousMass = 10;
+initialExternalNitrousMass = 50;
 externalTankHeight = 1;
 externalTankCrossSectionA = 0.25*pi*(externalTankDiameter).^2;
 internalTankSurfaceArea = pi*internalTankDiameter*internalTankHeight+2*internalTankCrossSectionA;
@@ -40,8 +40,8 @@ extFluidVol = externalTankHeight*(0.25*pi*(externalTankDiameter+2e-2)^2-0.25*pi*
 mFluid = 997*extFluidVol; %Water density of 997 assumed
 
 initialInternalTankTemp = -20+273.15;
-initialExternalTankTemp = -18+273.15;
-initialExtFluidTemp = -16.5+273.15;
+initialExternalTankTemp = 30+273.15;
+initialExtFluidTemp = 30+273.15;
 % initialExtFluidTemp = -17.5746+273.15;
 % initialInternalTankTemp = -20+273.15;
 % initialExternalTankTemp = 34+273.15;
@@ -54,6 +54,9 @@ fillingSystem = FillingSystem(ambientTemp,internalTankHeight,internalTankCrossSe
                heatTransferCoeffExternalTankWithFluid,SHCFluid,externalTankFluidSurfaceArea,...
                externalTankFluidHeatTransferCoeffWithSurroundings,mFluid,initialInternalTankTemp,...
                initialExternalTankTemp,initialExtFluidTemp);
+
+disp("Ext tank initial state: <Is saturated> <Temp> <MVapour> <MLiquid>");
+disp(fillingSystem.externalTank.isSaturated+" "+(fillingSystem.externalTank.temp-273.15)+" "+fillingSystem.externalTank.mVapour+" "+fillingSystem.externalTank.mLiquid);
            
 mdotFillRate = 40e-3;
 internalTempChangeRate = 0 / 60.0; %C/min -> C/sec
@@ -103,11 +106,11 @@ disp("Required total Q flux into Ext fluid: "+QInclFromEnv3+" W");
 disp("----------------------------");
 fillingPreferredInternalTankTemp = -20+273.15;
 fillingPreferredExternalTankTemp = -18+273.15;
-finalTargetInternalTankTemp = 30+273.15;
-maxQExt = 2000; %2000W max heating capacity
+finalTargetInternalTankTemp = 27+273.15;
+maxQExt = 5000; %5000W max heating capacity
 minQExt = -500; %Max 500W cooling ability
 targetInternalTankEndMass = 8; %8Kg
-maxPreferredFillingRate = 40e-3; %40g/sec
+maxPreferredFillingRate = 30e-3; %40g/sec
 trajectoryGen = FillingSystemTrajectoryGen(fillingPreferredInternalTankTemp,...
                fillingPreferredExternalTankTemp,finalTargetInternalTankTemp,...
                maxQExt,minQExt,targetInternalTankEndMass,maxPreferredFillingRate);
@@ -121,7 +124,7 @@ toc;
 vis = SystemVisualization();
 while(true)
     t = 0;
-    while(t<=120)
+    while(t<=340)
         t = t+0.1;
         [xSim,uSim] = trajectory.getXAndUForTime(t);
         vis.draw(xSim,uSim,t);

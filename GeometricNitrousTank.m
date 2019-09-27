@@ -181,7 +181,11 @@ classdef GeometricNitrousTank < matlab.mixin.Copyable%handle %Handle class so th
         end
         
         function Q = findHeatRateInputForTempChangeRateWithLiquidDrainingRate(obj,dTdt,mdotLiq)
-            h = FluidType.NITROUS_LIQUID.getSpecificEnthalpy(obj.temp,obj.vapourPressure);
+            try
+                h = FluidType.NITROUS_LIQUID.getSpecificEnthalpy(obj.temp,obj.vapourPressure);
+            catch
+                h = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.LIQUID,FluidProperty.SPECIFIC_ENTHALPY,FluidProperty.TEMPERATURE,obj.temp,FluidProperty.VAPOR_QUALITY,0);
+            end
             H = h*mdotLiq; %Energy being lost due to liquid
             dEdt = obj.findIntEnergyChangeRateForTempChangeRateWithFillRate(dTdt,-mdotLiq);
             Q = dEdt + H;
@@ -239,7 +243,6 @@ classdef GeometricNitrousTank < matlab.mixin.Copyable%handle %Handle class so th
 %             disp("E change: "+EIn);
 %             fprintf(['E1: ',num2str(ECv1),', E2: ',num2str(ECv2),'\n']);
 %             fprintf(['M1: ',num2str(obj.mTotalNitrous),', M2: ',num2str(obj.mTotalNitrous + mIn),'\n']);
-            
             obj.mTotalNitrous = obj.mTotalNitrous + mIn; %Nitrous mass of tank after
             
             prevTemp = obj.temp;
@@ -418,7 +421,10 @@ classdef GeometricNitrousTank < matlab.mixin.Copyable%handle %Handle class so th
                 %Calculate pressure for if tank was entirely filled by
                 %nitrous
                rho = obj.mTotalNitrous / obj.tankTotalVolume;
+%                disp("R: "+rho+" "+obj.mTotalNitrous+" "+obj.tankTotalVolume);
+%                drawnow;
                val = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.GAS,FluidProperty.PRESSURE,FluidProperty.TEMPERATURE,obj.temp,FluidProperty.DENSITY,rho);
+%                disp("P tank: "+val+" sat m liq: "+obj.getSaturatedLiquidMass()+" sat m vap: "+obj.getSaturatedVapourMass());
                if val > SaturatedNitrous.getVapourPressure(obj.temp)
                    val = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.LIQUID,FluidProperty.PRESSURE,FluidProperty.TEMPERATURE,obj.temp,FluidProperty.DENSITY,rho);
                end

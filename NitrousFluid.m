@@ -437,8 +437,8 @@ classdef NitrousFluid
         end
         
         function val = getLiquidSpecificSaturationEnthalpy(T)
-            PVap = SaturatedNitrous.getVapourPressure(T);
-            val = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.LIQUID,FluidProperty.SPECIFIC_ENTHALPY,FluidProperty.TEMPERATURE,T,FluidProperty.PRESSURE,PVap);
+            %PVap = SaturatedNitrous.getVapourPressure(T);
+            val = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.LIQUID,FluidProperty.SPECIFIC_ENTHALPY,FluidProperty.TEMPERATURE,T,FluidProperty.VAPOR_QUALITY,0);
 %             data = NitrousFluid.getDataFromFile(['nitrousRawData',filesep,'liquidSaturationEnthalpy.txt'],3); 
 %             val = (NitrousFluid.oneColInterp(data,1,2,T) * 1000) / NitrousFluid.getMolarMass();
         end
@@ -451,8 +451,8 @@ classdef NitrousFluid
         end
         
         function val = getGasSpecificSaturationEnthalpy(T)
-            PVap = SaturatedNitrous.getVapourPressure(T);
-            val = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.GAS,FluidProperty.SPECIFIC_ENTHALPY,FluidProperty.TEMPERATURE,T,FluidProperty.PRESSURE,PVap);
+            %PVap = SaturatedNitrous.getVapourPressure(T);
+            val = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.GAS,FluidProperty.SPECIFIC_ENTHALPY,FluidProperty.TEMPERATURE,T,FluidProperty.VAPOR_QUALITY,1);
         end
         
 %         %Function to get the specific enthalpy of the gas in J/Kg
