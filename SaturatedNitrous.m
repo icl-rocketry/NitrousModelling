@@ -72,6 +72,7 @@ classdef SaturatedNitrous
         function Tb = getBubbleGrowthTimeCharacteristic(P1,T1,P2)
             vapourPressure = SaturatedNitrous.getVapourPressure(T1);
             rhoLiq = FluidType.NITROUS_LIQUID.getDensity(T1,vapourPressure);
+%             disp("T1: "+T1+", rhoLiq: "+rhoLiq+" P2, "+P2+" PVap: "+vapourPressure+" P1: "+P1);
             %vapourPressure = SaturatedNitrous.getVapourPressure(T1);
             Tb = real(sqrt(1.5 * (rhoLiq/(vapourPressure-P2))));
         end
@@ -101,6 +102,11 @@ classdef SaturatedNitrous
         %if small then bubbles have a long time to form
         function k = getNonEquilibriumFlowParameter(P1,T1,P2,length)
             k = SaturatedNitrous.getBubbleGrowthTimeCharacteristic(P1,T1,P2) / SaturatedNitrous.getResidenceTime(P1,T1,P2,length);
+            if(isnan(k))
+               disp("K IS NAN "+P1+" "+T1+" "+P2); 
+               disp(SaturatedNitrous.getBubbleGrowthTimeCharacteristic(P1,T1,P2));
+               disp(SaturatedNitrous.getResidenceTime(P1,T1,P2,length));
+            end
         end
         
         function [X2,T2,v2,h2,P2] = getDownstreamIncompressiblePressureTemp(X1,P1,T1,G,v1,ignoreTempAndQuality)
