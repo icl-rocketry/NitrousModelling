@@ -9,8 +9,8 @@ close all
 
 %Change these parameters to alter the conditions of the chamber/injector
 PDownstream = 30e5; %Pressure downstream of orifice (Chamber pressure)
-AInjector1 = 0.25 * pi * (0.5e-3).^2; %Injector hole 1 cross section in m^3
-AInjector2 = 0.25 * pi * (0.5e-3).^2; %Injector hole 2 cross section in m^3
+AInjector1 = 0.25 * pi * (2e-3).^2; %Injector hole 1 cross section in m^3
+AInjector2 = 0.25 * pi * (2e-3).^2; %Injector hole 2 cross section in m^3
 %Discharge coefficient = "ratio of the actual discharge to the theoretical
 %discharge". Ideally empirically determined
 dischargeCoefficient1 = 0.8; %For injector orifice 1
@@ -46,6 +46,8 @@ while(tank.mLiquid > 0.01 && tank.vapourPressure > PDownstream && (i<1 || t(i) <
     [~,~,~,~,G] = SaturatedNitrous.getDownstreamSaturatedNHNEFlowCond(0,tank.temp,tank.vapourPressure,PDownstream,0,characteristicPipeLength);
     mdot1(i) = G .* AInjector1 .* dischargeCoefficient1;
     mdot2(i) = G .* AInjector2 .* dischargeCoefficient2;
+    MTank(i) = tank.mTotalNitrous;
+    MLiqTank(i) = tank.mLiquid;
     mdotTotal = mdot1(i)+mdot2(i);
     h = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.LIQUID,FluidProperty.SPECIFIC_ENTHALPY,FluidProperty.PRESSURE,tank.vapourPressure,FluidProperty.VAPOR_QUALITY,0);
     tank.changeNitrousMassEnergy(-mdotTotal.*dt,-h.*mdotTotal.*dt);
@@ -59,13 +61,24 @@ figure();
 hold on;
 plot(t,mdot1);
 plot(t,mdot2);
+plot(t,mdot1+mdot2);
 title("Injector mass flow vs t");
 ylabel("Kg/s");
 xlabel("Time (s)");
-legend('Injector 1','Injector 2');
+legend('Injector 1','Injector 2','Combined');
 hold off;
 figure();
 plot(t,PTank);
 ylabel("Pressure (Pa)");
 xlabel("Time (s)");
 title("Tank pressure vs t");
+figure();
+plot(t,MLiqTank);
+ylabel("Liquid nitrous in tank (Kg)");
+xlabel("Time (s)");
+title("Tank liquid mass vs t");
+figure();
+plot(t,MTank);
+ylabel("nitrous in tank (Kg)");
+xlabel("Time (s)");
+title("Tank nitrous mass vs t");
