@@ -1,11 +1,12 @@
 clear
 clc
 %For gas on saturation line
-filename = 'preBakedData/saturatedGasPipeValveFlowRates2.mat';
-%Gas one calculated with internal diameter of 4.8mm
+filename = 'preBakedData/saturatedLiquidPipeValveFlowRatesNEEDLE.mat';
+%NEEDLE gas one calculated with internal diam 6.8326mm. Gas one calculated with internal diameter of 4.8mm
 %Liquid one calculated with internal diamater of 10.2108mm
-pipeInternalDiameter = 4.8e-3;
-valveFullyOpenFlowCoefficient = 0.2; %12 for 1/4in non-swagelok and 0.2 for 1/8in swagelok and 1.4 for 1/4in swagelok
+%NEEDLE liquid one calculated with internal diam of 10.2108
+pipeInternalDiameter = 6.8326e-3;%4.8e-3;
+valveFullyOpenFlowCoefficient = 0.73; %NEEDLE: 0.09 for 1/8in needle, 0.37 for 1/4 needle, 0.73 for 1/2 needle BALL: 12 for 1/4in non-swagelok and 0.2 for 1/8in swagelok and 1.4 for 1/4in swagelok
 upstreamQuality = 1; %1 is vapour, 0 is liquid
 %Cd of 0.8 for liquid flow, Cd of 0.9 for gas flow
 dischargeCoefficient = 0.9; %Eg. mass flow calculated will be 0.8*mass flow from isentropic model. (Ratio of actual flow to ideal flow)
@@ -47,7 +48,7 @@ parfor z=1:len
     upstreamTemp = SaturatedNitrous.getSaturationTemperature(upstreamPressure);
     mdot = zeros(1,length(valveOpenAmt));
     for i=1:length(valveOpenAmt)
-        valve = BallValve(valveFullyOpenFlowCoefficient,valveOpenAmt(i));
+        valve = LinearValve(valveFullyOpenFlowCoefficient,valveOpenAmt(i));
         pvp = PipeValvePipe(pipe1,valve,pipe2);
         try
             [~,mdot(i),~,~] = pvp.getDownstreamTemperatureMassFlowFromPressureChange(downstreamPressure-upstreamPressure,FluidType.NITROUS_GENERAL,upstreamTemp,upstreamPressure,upstreamQuality,0);

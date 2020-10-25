@@ -95,7 +95,7 @@ classdef PipeValvePipe < FlowRestriction
                 catch ME
 %                      disp("Exception occured for mdot of: "+mdot +" ("+ME.identifier+"), P2: "+P2);
 %                      drawnow;
-                    if(strcmp(ME.identifier,'BallValve:DownstreamPTooLow')) %P3 req for mass flow less than 88KPa
+                    if(strcmp(ME.identifier,'BallValve:DownstreamPTooLow') || strcmp(ME.identifier,'LinearValve:DownstreamPTooLow')) %P3 req for mass flow less than 88KPa
                         P3 = PFinal;
                         T = T2;
                         X = X2;
@@ -115,7 +115,7 @@ classdef PipeValvePipe < FlowRestriction
                         
 %                          disp("Downstream P too low, P2: "+P2+" Err: "+err+" mdot: "+mdot);
                         return;
-                    elseif(strcmp(ME.identifier,'BallValve:PNan')) %Valve is closed, downstream P can be any value
+                    elseif(strcmp(ME.identifier,'BallValve:PNan') || strcmp(ME.identifier,'LinearValve:PNan')) %Valve is closed, downstream P can be any value
                         mdot2 = 0;
                         P3 = PFinal;
                         T = nan;

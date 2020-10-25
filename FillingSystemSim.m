@@ -2,7 +2,7 @@ clear
 clc
 close all
 
-ambientTemp = 40+273.15;
+ambientTemp = 0+273.15;
 internalTankHeight = 0.8;
 internalTankDiameter = 150e-3;
 externalTankDiameter = 400e-3;
@@ -22,8 +22,12 @@ externalTankWallThickness = 4e-3; %Assumed
 
 %Heat transfer coeff stainless steel in series with some insulation
 %material. BIG oversimplification
-insulationThickness = 5e-3;
-heatTransferCoeffInternalTank = 1/( (insulationThickness/0.03) + (internalTankWallThickness/13.5) );
+insulationThickness = 0e-3;%5e-3;
+airConvectionHeatTransferCoeff = 10.45;%10.45; %TODO
+nitrousConvectionHeatTransferCoeff = 44154; %TODO
+
+%(1/nitrousConvectionHeatTransferCoeff)
+heatTransferCoeffInternalTank = 1/((1/airConvectionHeatTransferCoeff) + 0 + (insulationThickness/0.03) + (internalTankWallThickness/13.5) );
 
 externalTankSurfaceArea = pi*externalTankDiameter*externalTankHeight+2*externalTankCrossSectionA;
 %Overall heat transfer coeff jusst from Stainless 316 thermal conductivity,
@@ -39,9 +43,9 @@ externalTankFluidHeatTransferCoeffWithSurroundings = 0.2/15e-3;
 extFluidVol = externalTankHeight*(0.25*pi*(externalTankDiameter+2e-2)^2-0.25*pi*(externalTankDiameter)^2);
 mFluid = 997*extFluidVol; %Water density of 997 assumed
 
-initialInternalTankTemp = -20+273.15;
-initialExternalTankTemp = 30+273.15;
-initialExtFluidTemp = 30+273.15;
+initialInternalTankTemp = 27+273.15;
+initialExternalTankTemp = 34+273.15;
+initialExtFluidTemp = 34+273.15;
 % initialExtFluidTemp = -17.5746+273.15;
 % initialInternalTankTemp = -20+273.15;
 % initialExternalTankTemp = 34+273.15;
@@ -105,12 +109,12 @@ disp("Required total Q flux into Ext fluid: "+QInclFromEnv3+" W");
 
 disp("----------------------------");
 fillingPreferredInternalTankTemp = -20+273.15;
-fillingPreferredExternalTankTemp = -18+273.15;
+fillingPreferredExternalTankTemp = 34+273.15;
 finalTargetInternalTankTemp = 27+273.15;
 maxQExt = 5000; %5000W max heating capacity
 minQExt = -500; %Max 500W cooling ability
-targetInternalTankEndMass = 8; %8Kg
-maxPreferredFillingRate = 30e-3; %40g/sec
+targetInternalTankEndMass = 5; %8Kg
+maxPreferredFillingRate = 50e-3; %40g/sec
 trajectoryGen = FillingSystemTrajectoryGen(fillingPreferredInternalTankTemp,...
                fillingPreferredExternalTankTemp,finalTargetInternalTankTemp,...
                maxQExt,minQExt,targetInternalTankEndMass,maxPreferredFillingRate);

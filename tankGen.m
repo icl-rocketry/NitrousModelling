@@ -4,5 +4,5 @@ function tank = tankGen(tempTakeoff,tankUllage,tankHeight,tankCrossSectionA)
     liqMass = FluidType.NITROUS_LIQUID.getDensity(tempTakeoff,PVap) * tankHeight * (1-tankUllage) * tankCrossSectionA;
     vapMass = FluidType.NITROUS_GAS.getDensity(tempTakeoff,PVap) * tankHeight * (tankUllage) * tankCrossSectionA;
     %Generate the tank model
-    tank = GeometricNitrousAndAirTank(tempTakeoff,(liqMass+vapMass),0,tankHeight,tankCrossSectionA,(1-tankUllage)*tankHeight);
+    tank = GeometricNitrousTank(tempTakeoff,(liqMass+vapMass),tankHeight,tankCrossSectionA,(1-tankUllage)*tankHeight);
 end

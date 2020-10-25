@@ -2,23 +2,26 @@ clear
 clc
 close all
 
-upstreamP = 31e5;
+upstreamP = 50e5;
 upstreamT = SaturatedNitrous.getSaturationTemperature(upstreamP);
 downstreamP = 30e5;
-upstreamQuality = 1;
+upstreamQuality = 0;
 dischargeCoefficient = 0.8; %Ratio of actual mass flow to isentropic predicted
 dP = downstreamP - upstreamP;
+AInjector1 = 0.25 * pi * (3e-3).^2; %Injector hole 1 cross section in m^3
+% pipe2A = 0.25*pi*(pipeInternalDiameter).^2;
+pipe2A = AInjector1;
 
-pipeInternalDiameter = 10.2108e-3;
+pipeInternalDiameter = 6.8326e-3;
 pipe1 = FluidPipe(0.25*pi*(pipeInternalDiameter).^2,1);
 valveOpenAmt = 0:0.025:1;
 % valve = BallValve(12,valveOpenAmt(1));
 % disp("Flow coeff: "+valve.getFlowCoefficient());
-pipe2 = FluidPipe(0.25*pi*(pipeInternalDiameter).^2,1);
+pipe2 = FluidPipe(pipe2A,1);
 % pvp = PipeValvePipe(pipe1,valve,pipe2);
 
 % valve = BallValve(0.2,0.025);
-valve = BallValve(0.2,0.025);
+valve = LinearValve(0.37,1);
 pvp = PipeValvePipe(pipe1,valve,pipe2);
 tic;
 [TTest,mdotTest,XTest,vDownstreamTest] = pvp.getDownstreamTemperatureMassFlowFromPressureChange(dP,FluidType.NITROUS_GENERAL,upstreamT,upstreamP,upstreamQuality,0);

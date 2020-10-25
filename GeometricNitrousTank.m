@@ -355,7 +355,7 @@ classdef GeometricNitrousTank < matlab.mixin.Copyable%handle %Handle class so th
            P = obj.vapourPressure;
            if(~obj.isSaturated())
               %Assume calculated P is at half tank height
-              P = P - obj.vapourDensity * GeometricNitrousTank.g * (h-(obj.tankHeight/2));
+%              P = P - obj.vapourDensity * GeometricNitrousTank.g * (h-(obj.tankHeight/2));
               return;
            end
            liqHeight = obj.liquidHeight; %Height of nitrous liquid phase
@@ -447,6 +447,8 @@ classdef GeometricNitrousTank < matlab.mixin.Copyable%handle %Handle class so th
         function val=get.vapourDensity(obj)
             if ~obj.isSaturated() %If not saturated, then get density of nitrous gas
                 %is just m/V
+%                 disp("Temp: "+obj.temp);
+%                 disp("Taking pressure to be "+obj.vapourPressure);
                val = NitrousFluidCoolProp.getPropertyForPhase(FluidPhase.GAS,FluidProperty.DENSITY,FluidProperty.TEMPERATURE,obj.temp,FluidProperty.PRESSURE,obj.vapourPressure);
                return;
             end

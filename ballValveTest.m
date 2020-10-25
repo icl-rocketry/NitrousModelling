@@ -3,10 +3,10 @@ clc
 close all
 
 %Ball valve test
-testValve = BallValve(12,0);
+testValve = BallValve(12,0); %12
 angle = 1:0.01:90;
 openAmt = angle ./ 90;
-mdot = 0.010; %10 gram a sec flow rate
+mdot = 0.01; %10 gram a sec flow rate
 for i=1:length(openAmt)
     testValve.setOpenAmtFraction(openAmt(i));
     Cv(i) = testValve.getFlowCoefficient(); 
