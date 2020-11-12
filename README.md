@@ -5,7 +5,7 @@ Code relating to modelling nitrous oxide, including but not limited to:
 - Predictions of tank conditions for Nitrous Oxide tanks
 A little bit of a mess of scripts, classes and data but useful.
 
-Prefer to use the model built in simscape/simulink using the simscape two phase flow elements, but this has some useful code snippets
+Prefer to use the model built in simscape/simulink using the simscape two phase flow elements (https://github.com/icl-rocketry/PropulsionSystemModel), but this has some useful code snippets
 
 # How to get it working (Requires CoolProp!!)
 - Install Python 3.7 https://www.python.org/downloads/release/python-377/
@@ -35,4 +35,4 @@ where 1 refers to upstream conditions and 2 refers to downstream conditions and 
 - Look at ballValveTest.m but replace BallValve with LinearValve
 
 # Calculate orifice area exposed to flow for a full bore ball valve at a given opening angle
-- Use FullBoreBallValve.getOrificeArea(theta,boreDiameter,ballDiameter) where boreDiameter and ballDiameter are in metres and theta is the angle that the valve is at (with pi/2 corresponding to being fully open)
+- Use FullBoreBallValve.getOrificeArea(theta,boreDiameter,ballDiameter) where boreDiameter and ballDiameter are in metres and theta is the angle that the valve is at (with pi/2 corresponding to being fully open). Area returned is in m^2
