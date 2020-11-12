@@ -1,3 +1,4 @@
+%Prefer to use simscape/simulink model
 clear
 clc
 close all

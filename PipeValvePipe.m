@@ -1,3 +1,5 @@
+%Prefer to use simscape/simulink model
+%
 %Represents flow restrictions connected in series
 classdef PipeValvePipe < FlowRestriction
     properties

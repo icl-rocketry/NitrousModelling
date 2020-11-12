@@ -4,10 +4,7 @@
 % Root MUST lie between minX and maxX to work and f(minX) and f(maxX)
 % should have a change of sign
 % Created whilst trying reliably solve a function in
-% GeometricNitrousAndAirTank since fzero wasn't able to solve it, and
-% NonLinearEquationSolver also was unable (Since it's designed for higher
-% dimensions NonLinearEquationSolver cannot use a bracketed method, which
-% is what was required)
+% GeometricNitrousAndAirTank since fzero wasn't able to solve it
 %
 % By Eddie Brown
 function [x] = betterfzero(func,x0,minX,maxX,convergenceTolerance,MAX_ITERS,mindx,forceBracketing)

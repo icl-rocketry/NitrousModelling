@@ -1,3 +1,5 @@
+%Prefer to use simscape/simulink model
+%
 %Class to calculate required quantities associated with a flow coming from
 %a reservoir out the end of a pipe driven by the pressure gradient
 

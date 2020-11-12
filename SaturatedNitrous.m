@@ -1,3 +1,10 @@
+%Implementation of NHNE flow and similar in here are useful and use CoolProp for flow properties.
+%
+%The values of enthalpy and similar given from this are from a different resource and 
+%are slightly different and incompatible with using at the same time as CoolProp 
+%- prefer to use CoolProp.
+
+%
 %Class to get properties of nitrous in saturated state (Liquid and gas
 %inside a contained above boiling temperature)
 %Valid UP TO the critical temperature only (309.57K)
@@ -51,18 +58,7 @@ classdef SaturatedNitrous
         %Gets the density of the mixture for a given quality X, temperature
         %T and pressure P
         function rho = getDensity(X,T,P)
-              
               rho = NitrousFluidCoolProp.getProperty(FluidProperty.DENSITY,FluidProperty.PRESSURE,P,FluidProperty.VAPOR_QUALITY,X);
-%             if(X == 0)
-%                 rho = FluidType.NITROUS_LIQUID.getDensity(T,P);
-%                 return;
-%             elseif(X==1)
-%                 rho = FluidType.NITROUS_GAS.getDensity(T,P);
-%                 return;
-%             end
-%             rhoVapour = FluidType.NITROUS_GAS.getDensity(T,P);
-%             rhoLiquid = FluidType.NITROUS_LIQUID.getDensity(T,P);
-%             rho = 1 / ((1/rhoVapour)*X + (1/rhoLiquid)*(1-X));
         end
         
         %Bubble growth time characteristic as defined in "Modeling feed
@@ -72,8 +68,6 @@ classdef SaturatedNitrous
         function Tb = getBubbleGrowthTimeCharacteristic(P1,T1,P2)
             vapourPressure = SaturatedNitrous.getVapourPressure(T1);
             rhoLiq = FluidType.NITROUS_LIQUID.getDensity(T1,vapourPressure);
-%             disp("T1: "+T1+", rhoLiq: "+rhoLiq+" P2, "+P2+" PVap: "+vapourPressure+" P1: "+P1);
-            %vapourPressure = SaturatedNitrous.getVapourPressure(T1);
             Tb = real(sqrt(1.5 * (rhoLiq/(vapourPressure-P2))));
         end
         
@@ -483,12 +477,6 @@ classdef SaturatedNitrous
             %Polynomial fit to coolprop's output for speed enhancement
             polyCoeffs = [6.30913881904569e-14,-1.51190519529204e-10,1.62556872417980e-07,-0.000103259603725827,0.0429133163140751,-12.1912294858819,2397.61266586979,-322316.427676396,28344892.9083561,-1472430566.16391,34309300122.4424];
             P = polyval(polyCoeffs,T);
-%             P = NitrousFluidCoolProp.getProperty(FluidProperty.PRESSURE,FluidProperty.TEMPERATURE,T,FluidProperty.VAPOR_QUALITY,0);
-%             TRel = T / SaturatedNitrous.T_CRIT; %Relative temp
-%             b = [-6.71893,1.35966,-1.3779,-4.051]; %Constants in equation
-%             %Equation from paper
-%             logPressureRatio = (1/TRel) * ( b(1)*(1-TRel) + b(2)*(1-TRel)^1.5 + b(3)*(1-TRel)^2.5 + b(4)*(1-TRel)^5 );
-%             P = exp(logPressureRatio) * SaturatedNitrous.P_CRIT; %Calculate vapour pressure
         end
         
         %Gets the liquid density (Kg/m^3) of saturated nitrous at a given

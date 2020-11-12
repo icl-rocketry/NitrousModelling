@@ -1,3 +1,4 @@
+%Prefer to use simscape/simulink model to this.
 clear
 clc
 close all

@@ -1,3 +1,5 @@
+%Very crude attempt to come up with a first estimate for what valves,
+%etc... should be doing at each point in time to achieve filling
 classdef FillingSystemTrajectoryGen
    properties
       fillingPreferredInternalTankTemp = -20+273.15;

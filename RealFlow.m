@@ -1,3 +1,8 @@
+%Estimates some "real gas" behaviours based on a method suggested in
+%"Real_Gas_Thermodynamics", was used before CoolProp/NIST were discovered to exist. 
+%Just use CoolProp for values instead of this...
+
+
 %Class to get properties of real flow at various points with isentropic
 %and adiabatic equations. 
 %

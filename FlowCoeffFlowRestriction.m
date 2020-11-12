@@ -1,5 +1,5 @@
 %Class to represent any flow restriction that can be modelled via a simple
-%(perhaps variable) Cv - flow coefficient. Eg. a valve or an orifice
+%(perhaps variable) Cv - IMPERIAL flow coefficient. Eg. a valve or an orifice
 classdef (Abstract) FlowCoeffFlowRestriction < FlowRestriction
     methods (Abstract)
         coeff = getFlowCoefficient(obj)

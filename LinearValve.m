@@ -1,8 +1,9 @@
+%Assumes isenthalpic flow through a valve with an imperial flow coefficient
+%which varies linearly from 0 to max with open amount
 classdef LinearValve < FlowCoeffFlowRestriction
     properties(SetAccess=private)
         openAmt = 1; %1 is fully open
         fullyOpenCv = 12; %Flow coefficient for when valve fully open
-        %CvShapePolynomialFit = [-8.20125000000565,15.4351730769403,-8.93336538463520,2.68560314686376,-0.247832167834784,0.259200466200711,0];
     end
     methods
         function obj = LinearValve(fullyOpenCv,initialOpenAmt)

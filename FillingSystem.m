@@ -1,3 +1,4 @@
+%Prefer to use simscape/simulink model to this.
 classdef FillingSystem  < matlab.mixin.Copyable
    properties
       internalTank;

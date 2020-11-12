@@ -1,3 +1,6 @@
+% NOTE! If TankEnergyBalanceFast.USE is true then this will lookup based
+% on the precomputed values! (Faster)
+%
 % Script to model the state of a nitrous tank with constant cross sectional area, with given pertubations to mass etc.
 % NOTE this model assumes all fluids within tank are always at the same
 % temperature and in equilibrium so will transfer heat between them at infinite rate so as to
