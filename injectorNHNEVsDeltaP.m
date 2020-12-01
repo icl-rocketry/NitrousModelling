@@ -24,7 +24,9 @@ for i=1:length(PUpstream)
     %Assume upstream flow is ON saturation line and FULLY liquid (bold
     %simplifying assumption)
     TUpstream = SaturatedNitrous.getSaturationTemperature(PUpstream(i));
-    [~,~,v2(i),~,G] = SaturatedNitrous.getDownstreamSaturatedNHNEFlowCond(XUpstream,TUpstream,PUpstream(i),PDownstream,vUpstream,characteristicLength);
+    h1(i) = NitrousFluidCoolProp.getProperty(FluidProperty.SPECIFIC_ENTHALPY, FluidProperty.PRESSURE, PUpstream(i), FluidProperty.VAPOR_QUALITY, XUpstream);
+    [~,~,v2(i),h2(i),G] = SaturatedNitrous.getDownstreamSaturatedNHNEFlowCond(XUpstream,TUpstream,PUpstream(i),PDownstream,vUpstream,characteristicLength);
+    dh(i) = h2(i) - h1(i);
     mdot1(i) = G .* AInjector1 .* dischargeCoefficient1;
     mdot2(i) = G .* AInjector2 .* dischargeCoefficient2;
     mdotTotal(i) = mdot1(i) + mdot2(i);
