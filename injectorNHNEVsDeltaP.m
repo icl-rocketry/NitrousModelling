@@ -4,8 +4,8 @@ close all
 
 %Change these parameters to alter the conditions of the chamber/injector
 PDownstream = 30e5; %Pressure downstream of orifice (Chamber pressure)
-AInjector1 = 0.25 * pi * (1.5e-3).^2; %Injector hole 1 cross section in m^3
-AInjector2 = 0.25 * pi * (1.5e-3).^2; %Injector hole 2 cross section in m^3
+AInjector1 = 5.*0.25 * pi * (1.47e-3).^2; %Injector hole 1 cross section in m^3
+AInjector2 = 5.*0.25 * pi * (1.47e-3).^2; %Injector hole 2 cross section in m^3
 
 %Discharge coefficient = "ratio of the actual discharge to the theoretical
 %discharge". Ideally empirically determined. THIS IS RATIO OF REAL TO NHNE
